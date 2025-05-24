@@ -1,0 +1,37 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+from typing import List
+from .. import crud, schemas, database, auth
+
+router = APIRouter(prefix="/users", tags=["users"])
+
+
+@router.get("/me", response_model=schemas.User)
+def get_current_user_info(current_user: database.User = Depends(auth.get_current_user)):
+    return current_user
+
+
+@router.put("/me/avatar", response_model=schemas.User)
+def update_user_avatar(
+    user_update: schemas.UserUpdate,
+    current_user: database.User = Depends(auth.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    if user_update.avatar_url is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Avatar URL is required"
+        )
+    
+    updated_user = crud.update_user_avatar(db, current_user.id, user_update.avatar_url)
+    
+    # Log avatar update
+    crud.create_audit_log(
+        db=db,
+        user_id=current_user.id,
+        action="AVATAR_UPDATED",
+        resource_type="user",
+        resource_id=str(current_user.id)
+    )
+    
+    return updated_user
