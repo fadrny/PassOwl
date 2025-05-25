@@ -91,10 +91,3 @@
 		{loading ? 'Registrování...' : 'Registrovat se'}
 	</Button>
 </form>
-
-<p class="mt-6 text-center text-sm text-gray-500">
-	Již máte účet?
-	<a href="/login" class="font-semibold text-indigo-600 hover:text-indigo-500">
-		Přihlaste se
-	</a>
-</p>

@@ -1,4 +1,9 @@
-<div class="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
+
+<script>
+    import RegisterForm from '$lib/components/forms/RegisterForm.svelte';
+</script>
+
+<div class="flex-1 flex-col justify-center px-6 py-12 lg:px-8">
     <div class="sm:mx-auto sm:w-full sm:max-w-sm">
         <h2 class="mt-10 text-center text-2xl/9 font-bold tracking-tight text-gray-900">
             Vytvořit nový účet
@@ -16,7 +21,3 @@
         </p>
     </div>
 </div>
-
-<script>
-    import RegisterForm from '$lib/components/forms/RegisterForm.svelte';
-</script>

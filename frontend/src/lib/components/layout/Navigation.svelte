@@ -4,9 +4,9 @@
 	import Button from '$lib/components/ui/Button.svelte';
 
 	function handleLogout() {
-		AuthStore.logout();
-		goto('/');
-	}
+        AuthStore.logout();
+        goto('/');
+    }
 </script>
 
 <nav class="bg-white shadow">

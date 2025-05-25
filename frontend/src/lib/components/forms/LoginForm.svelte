@@ -40,9 +40,9 @@
 			}
 
 			const { access_token, encryptionSalt } = result.data!;
-			AuthStore.setAuthData(access_token, credentials.username, encryptionSalt);
-			
-			goto('/');
+            AuthStore.setAuthData(access_token, credentials.username, encryptionSalt);
+            
+            goto('/dashboard');
 		} catch (err) {
 			console.error('Login error:', err);
 			errors = ['Nastala neočekávaná chyba'];
@@ -102,10 +102,3 @@
 		{loading ? 'Přihlašování...' : 'Přihlásit se'}
 	</Button>
 </form>
-
-<p class="mt-6 text-center text-sm text-gray-500">
-	Nemáte vytvořený účet?
-	<a href="/register" class="font-semibold text-indigo-600 hover:text-indigo-500">
-		Zaregistrujte se
-	</a>
-</p>

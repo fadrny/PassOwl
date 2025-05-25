@@ -7,7 +7,6 @@
 		value: string;
 		placeholder?: string;
 		required?: boolean;
-		autocomplete?: string;
 		error?: string;
 	}
 
@@ -19,7 +18,6 @@
 		value = $bindable(),
 		placeholder,
 		required = false,
-		autocomplete,
 		error
 	}: Props = $props();
 
@@ -40,7 +38,6 @@
 			{id}
 			{placeholder}
 			{required}
-			{autocomplete}
 			bind:value
 			class={inputClasses}
 		/>
