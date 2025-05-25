@@ -1,19 +1,3 @@
-<script>
-    import { onMount } from 'svelte';
-    import { goto } from '$app/navigation';
-    import { authUser, AuthStore } from '$lib/stores/auth.js';
-
-    onMount(() => {
-        // Initialize auth store (it will check localStorage automatically)
-        AuthStore.initialize();
-        
-        // Redirect to dashboard if logged in
-        if ($authUser.isLoggedIn) {
-            goto('/dashboard');
-        }
-    });
-</script>
-
 <svelte:head>
     <title>PassOwl - Správa hesel</title>
 </svelte:head>

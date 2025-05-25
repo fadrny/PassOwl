@@ -1,7 +1,18 @@
 <script lang="ts">
-	import '../app.css';
+	import '../../app.css';
+	import { onMount } from 'svelte';
+    import { goto } from '$app/navigation';
+    import { authUser, AuthStore } from '$lib/stores/auth.js';
 
-	let { children } = $props();
+	let { data, children }: { data: LayoutData, children: Snippet } = $props();
+
+    onMount(() => {
+        AuthStore.initialize();
+        
+        if ($authUser.isLoggedIn) {
+            goto('/dashboard');
+        }
+    });
 </script>
 
 <div class="mx-auto flex size-full max-w-3xl flex-col pt-10">

@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { Snippet } from 'svelte';
-    import type { LayoutData } from './$types';
-    import '../../app.css';
+    import type { LayoutData } from '../../$types';
+    import '../../../app.css';
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
     import { authUser, AuthStore } from '$lib/stores/auth.js';

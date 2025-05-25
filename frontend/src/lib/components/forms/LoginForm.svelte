@@ -33,16 +33,16 @@
 
 		try {
 			const result = await AuthService.login(credentials);
-			
+
 			if (result.error) {
 				errors = [result.error.detail];
 				return;
 			}
 
 			const { access_token, encryptionSalt } = result.data!;
-            AuthStore.setAuthData(access_token, credentials.username, encryptionSalt);
-            
-            goto('/dashboard');
+			AuthStore.setAuthData(access_token, credentials.username, encryptionSalt);
+
+			goto('/dashboard');
 		} catch (err) {
 			console.error('Login error:', err);
 			errors = ['Nastala neočekávaná chyba'];
@@ -56,7 +56,11 @@
 	<div class="mb-4 rounded-md bg-green-50 p-4">
 		<div class="flex">
 			<svg class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
-				<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.236 4.53L7.53 10.23a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clip-rule="evenodd" />
+				<path
+					fill-rule="evenodd"
+					d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.236 4.53L7.53 10.23a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z"
+					clip-rule="evenodd"
+				/>
 			</svg>
 			<div class="ml-3">
 				<p class="text-sm font-medium text-green-800">
@@ -67,13 +71,18 @@
 	</div>
 {/if}
 
-<form class="space-y-6" onsubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
+<form
+	class="space-y-6"
+	onsubmit={(e) => {
+		e.preventDefault();
+		handleSubmit();
+	}}
+>
 	<Input
 		type="text"
 		name="username"
 		id="username"
 		label="Uživatelské jméno"
-		autocomplete="username"
 		required
 		bind:value={credentials.username}
 	/>
@@ -83,7 +92,6 @@
 		name="password"
 		id="password"
 		label="Heslo"
-		autocomplete="current-password"
 		required
 		bind:value={credentials.password}
 	/>
@@ -92,13 +100,7 @@
 		<ErrorMessage message={errors[0]} />
 	{/if}
 
-	<Button 
-		type="submit" 
-		variant="primary" 
-		size="lg" 
-		disabled={loading}
-		loading={loading}
-	>
+	<Button type="submit" variant="primary" size="lg" disabled={loading} {loading}>
 		{loading ? 'Přihlašování...' : 'Přihlásit se'}
 	</Button>
 </form>
