@@ -11,7 +11,7 @@ DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://username:password@localho
 
 engine = create_engine(
     DATABASE_URL,
-    pool_pre_ping=True,
+    pool_pre_ping=True,  # Should handle scale-to-zero
     connect_args={
         "connect_timeout": 30,
         "command_timeout": 30,
