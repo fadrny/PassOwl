@@ -1,5 +1,6 @@
 import { writable } from 'svelte/store';
 import { browser } from '$app/environment';
+// Odebrat import api zde - způsobuje circular dependency
 import type { AuthUser } from '$lib/types/auth';
 
 // Auth state
@@ -23,6 +24,10 @@ export class AuthStore {
 		const username = localStorage.getItem(STORAGE_KEYS.USERNAME);
 
 		if (token && username) {
+			// Dynamický import api klienta
+			import('$lib/services/api-client').then(({ api }) => {
+				api.setSecurityData(token);
+			});
 			authUser.set({ username, isLoggedIn: true });
 		}
 	}
@@ -37,6 +42,11 @@ export class AuthStore {
 		localStorage.setItem(STORAGE_KEYS.USERNAME, username);
 		localStorage.setItem(STORAGE_KEYS.ENCRYPTION_SALT, encryptionSalt);
 
+		// Dynamický import api klienta
+		import('$lib/services/api-client').then(({ api }) => {
+			api.setSecurityData(token);
+		});
+
 		authUser.set({ username, isLoggedIn: true });
 	}
 
@@ -49,6 +59,11 @@ export class AuthStore {
 		localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
 		localStorage.removeItem(STORAGE_KEYS.USERNAME);
 		localStorage.removeItem(STORAGE_KEYS.ENCRYPTION_SALT);
+
+		// Dynamický import api klienta
+		import('$lib/services/api-client').then(({ api }) => {
+			api.setSecurityData(null);
+		});
 
 		authUser.set({ username: '', isLoggedIn: false });
 	}

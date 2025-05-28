@@ -1,5 +1,6 @@
 <script>
     import DashboardCard from '$lib/components/layout/DashboardCard.svelte';
+    import { goto } from '$app/navigation';
 </script>
 
 <div class="border-4 border-dashed border-gray-200 rounded-lg p-8">
@@ -13,21 +14,21 @@
             title="Hesla"
             description="Spravujte svá hesla bezpečně"
             buttonText="Zobrazit hesla"
-            onclick={() => console.log('Navigate to passwords')}
+            onclick={() => goto('/dashboard/passwords')}
         />
         
         <DashboardCard
             title="Bezpečné poznámky"
             description="Ukládejte důležité informace"
             buttonText="Zobrazit poznámky"
-            onclick={() => console.log('Navigate to notes')}
+            onclick={() => goto('/dashboard/notes')}
         />
         
         <DashboardCard
             title="Kategorie"
             description="Organizujte svá hesla"
             buttonText="Spravovat kategorie"
-            onclick={() => console.log('Navigate to categories')}
+            onclick={() => goto('/dashboard/categories')}
         />
     </div>
 </div>

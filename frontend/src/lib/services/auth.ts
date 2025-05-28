@@ -1,77 +1,121 @@
-import { ApiService } from './api';
+import { api } from './api-client';
 import { generateSalt, generateLoginHash } from './crypto';
 import type { 
-	LoginCredentials, 
-	RegisterCredentials, 
-	LoginResponse, 
-	SaltsResponse, 
-	RegisterRequest,
-	LoginRequest
-} from '$lib/types/auth';
+  LoginCredentials, 
+  RegisterCredentials,
+  UserCreate,
+  UserLogin,
+  UserSalts,
+  Token
+} from './api';
 import type { ApiResponse } from '$lib/types/api';
 
 export class AuthService {
-	/**
-	 * Registrace nového uživatele
-	 */
-	static async register(credentials: RegisterCredentials): Promise<ApiResponse<void>> {
-		const { username, password } = credentials;
+  /**
+   * Registrace nového uživatele
+   */
+  static async register(credentials: RegisterCredentials): Promise<ApiResponse<void>> {
+    const { username, password } = credentials;
 
-		// Generování saltů
-		const loginSalt = await generateSalt();
-		const encryptionSalt = await generateSalt();
+    const loginSalt = await generateSalt();
+    const encryptionSalt = await generateSalt();
 
-		// Generování login hashe
-		const loginPasswordHash = await generateLoginHash(password, loginSalt);
+    // login hash
+    const loginPasswordHash = await generateLoginHash(password, loginSalt);
 
-		const registerRequest: RegisterRequest = {
-			username: username.trim(),
-			login_password_hash: loginPasswordHash,
-			login_salt: loginSalt,
-			encryption_salt: encryptionSalt
-		};
+    const registerRequest: UserCreate = {
+      username: username.trim(),
+      login_password_hash: loginPasswordHash,
+      login_salt: loginSalt,
+      encryption_salt: encryptionSalt
+    };
 
-		return ApiService.post<void>('/auth/register', registerRequest);
-	}
+    try {
+      const response = await api.auth.registerUserAuthRegisterPost(registerRequest);
 
-	/**
-	 * Přihlášení uživatele
-	 */
-	static async login(credentials: LoginCredentials): Promise<ApiResponse<LoginResponse & { encryptionSalt: string }>> {
-		const { username, password } = credentials;
+	  return { data: undefined };
+    } catch (error: any) {
 
-		// Získání saltů
-		const saltsResponse = await ApiService.get<SaltsResponse>(
-			`/auth/salts?username=${encodeURIComponent(username.trim())}`
-		);
+		let errorMessage = 'Chyba při registraci';
+      
+      if (error.status === 400) {
+        errorMessage = 'Uživatelské jméno již existuje';
+      } else if (error.status === 422) {
+        errorMessage = 'Neplatné údaje pro registraci';
+      } else if (error.error?.detail) {
+        errorMessage = error.error.detail;
+      } else if (error.message) {
+        errorMessage = 'Chyba serveru';
+      }
 
-		if (saltsResponse.error) {
-			return { error: saltsResponse.error };
-		}
+      return {
+        error: {
+          detail: errorMessage,
+          status: error.status
+        }
+      };
+    }
+  }
 
-		const { login_salt, encryption_salt } = saltsResponse.data!;
+  /**
+   * Přihlášení uživatele
+   */
+  static async login(credentials: LoginCredentials): Promise<ApiResponse<{ access_token: string; token_type: string; encryptionSalt: string }>> {
+    const { username, password } = credentials;
 
-		// Generování login hashe
-		const loginPasswordHash = await generateLoginHash(password, login_salt);
+    try {
+      const saltsResponse = await api.auth.getUserSaltsAuthSaltsGet({ username: username.trim() });
+      const salts = saltsResponse.data as UserSalts;
+      const { login_salt, encryption_salt } = salts;
 
-		const loginRequest: LoginRequest = {
-			username: username.trim(),
-			login_password_hash: loginPasswordHash
-		};
+      // login hash
+      const loginPasswordHash = await generateLoginHash(password, login_salt);
 
-		// Přihlášení
-		const loginResponse = await ApiService.post<LoginResponse>('/auth/login', loginRequest);
+      const loginRequest: UserLogin = {
+        username: username.trim(),
+        login_password_hash: loginPasswordHash
+      };
 
-		if (loginResponse.error) {
-			return { error: loginResponse.error };
-		}
+      // Přihlášení
+      const loginResponse = await api.auth.loginUserAuthLoginPost(loginRequest);
+      const token = loginResponse.data as Token;
 
-		// Přidání encryption saltu k odpovědi
-		return {
-			data: {
-				...loginResponse.data!,
-				encryptionSalt: encryption_salt
-			}
-		};
-	}
+      // Nastavení tokenu pro další API volání
+      api.setSecurityData(token.access_token);
+
+      // Přidání encryption saltu k odpovědi
+      return {
+        data: {
+          access_token: token.access_token,
+          token_type: token.token_type,
+          encryptionSalt: encryption_salt
+        }
+      };
+    } catch (error: any) {
+	
+	  let errorMessage = 'Chyba při přihlášení';
+      
+      if (error.status === 401) {
+        errorMessage = 'Nesprávné uživatelské jméno nebo heslo';
+      } else if (error.status === 404) {
+        errorMessage = 'Nesprávné uživatelské jméno nebo heslo';
+      } else if (error.status === 400) {
+        errorMessage = 'Neplatné přihlašovací údaje';
+      } else if (error.status === 422) {
+        errorMessage = 'Nesprávný formát přihlašovacích údajů';
+      } else if (error.error?.detail) {
+        errorMessage = error.error.detail;
+      } else if (error.message && !error.status) {
+        // Síťová chyba (např. fetch failed)
+        errorMessage = 'Chyba serveru';
+      }
+
+      return {
+        error: {
+          detail: errorMessage,
+          status: error.status
+        }
+      };
+    }
+  }
 }
