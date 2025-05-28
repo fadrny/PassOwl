@@ -2,3 +2,4 @@
 backend/app/routers/__pycache__/
 backend/app/__pycache__/
 db/.idea/
+backend/.idea/

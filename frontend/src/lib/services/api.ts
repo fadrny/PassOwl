@@ -33,8 +33,12 @@ export interface AuditLog {
 
 /** Credential */
 export interface Credential {
-  /** Encrypted Title */
-  encrypted_title: string;
+  /** Title */
+  title: string;
+  /** Url */
+  url?: string | null;
+  /** Username */
+  username: string;
   /** Encrypted Data */
   encrypted_data: string;
   /** Encryption Iv */
@@ -62,8 +66,12 @@ export interface Credential {
 
 /** CredentialCreate */
 export interface CredentialCreate {
-  /** Encrypted Title */
-  encrypted_title: string;
+  /** Title */
+  title: string;
+  /** Url */
+  url?: string | null;
+  /** Username */
+  username: string;
   /** Encrypted Data */
   encrypted_data: string;
   /** Encryption Iv */
@@ -77,8 +85,12 @@ export interface CredentialCreate {
 
 /** CredentialUpdate */
 export interface CredentialUpdate {
-  /** Encrypted Title */
-  encrypted_title?: string | null;
+  /** Title */
+  title?: string | null;
+  /** Url */
+  url?: string | null;
+  /** Username */
+  username?: string | null;
   /** Encrypted Data */
   encrypted_data?: string | null;
   /** Encryption Iv */
@@ -498,7 +510,7 @@ export class HttpClient<SecurityDataType = unknown> {
  * @title PassOwl API
  * @version 1.0.0
  *
- * Secure password manager with client-side encryption
+ * E2E šifrové ukládání hesel
  */
 export class Api<
   SecurityDataType extends unknown,

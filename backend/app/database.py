@@ -67,7 +67,9 @@ class Credential(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    encrypted_title = Column(Text, nullable=False)
+    title = Column(Text, nullable=False)
+    url = Column(Text, nullable=True)
+    username = Column(Text, nullable=False)
     encrypted_data = Column(Text, nullable=False)
     encryption_iv = Column(String(24), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -100,11 +102,11 @@ class PasswordCategory(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     name = Column(String(100), nullable=False)
     color_hex = Column(String(7), nullable=True)  # Format: #RRGGBB
-    
+
     # Relationships
     owner = relationship("User", back_populates="categories")
     credentials = relationship("Credential", secondary=credential_category_links, back_populates="categories")
-    
+
     __table_args__ = (UniqueConstraint('user_id', 'name', name='_user_category_name_uc'),)
 
 

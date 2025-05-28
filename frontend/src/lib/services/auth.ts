@@ -1,7 +1,8 @@
 import { api } from './api-client';
 import { generateSalt, generateLoginHash } from './crypto';
-import type { 
-  LoginCredentials, 
+import { encryptionKeyManager } from './encryption-key-manager';
+import type {
+  LoginCredentials,
   RegisterCredentials,
   UserCreate,
   UserLogin,
@@ -17,10 +18,11 @@ export class AuthService {
   static async register(credentials: RegisterCredentials): Promise<ApiResponse<void>> {
     const { username, password } = credentials;
 
+    // Generování saltů
     const loginSalt = await generateSalt();
     const encryptionSalt = await generateSalt();
 
-    // login hash
+    // Generování login hashe
     const loginPasswordHash = await generateLoginHash(password, loginSalt);
 
     const registerRequest: UserCreate = {
@@ -32,11 +34,9 @@ export class AuthService {
 
     try {
       const response = await api.auth.registerUserAuthRegisterPost(registerRequest);
-
-	  return { data: undefined };
+      return { data: undefined };
     } catch (error: any) {
-
-		let errorMessage = 'Chyba při registraci';
+      let errorMessage = 'Chyba při registraci';
       
       if (error.status === 400) {
         errorMessage = 'Uživatelské jméno již existuje';
@@ -45,7 +45,7 @@ export class AuthService {
       } else if (error.error?.detail) {
         errorMessage = error.error.detail;
       } else if (error.message) {
-        errorMessage = 'Chyba serveru';
+        errorMessage = 'Nepodařilo se připojit k serveru';
       }
 
       return {
@@ -58,17 +58,18 @@ export class AuthService {
   }
 
   /**
-   * Přihlášení uživatele
+   * Přihlášení uživatele s odvozením šifrovacího klíče
    */
   static async login(credentials: LoginCredentials): Promise<ApiResponse<{ access_token: string; token_type: string; encryptionSalt: string }>> {
     const { username, password } = credentials;
 
     try {
+      // Získání saltů
       const saltsResponse = await api.auth.getUserSaltsAuthSaltsGet({ username: username.trim() });
       const salts = saltsResponse.data as UserSalts;
       const { login_salt, encryption_salt } = salts;
 
-      // login hash
+      // Generování login hashe
       const loginPasswordHash = await generateLoginHash(password, login_salt);
 
       const loginRequest: UserLogin = {
@@ -83,6 +84,18 @@ export class AuthService {
       // Nastavení tokenu pro další API volání
       api.setSecurityData(token.access_token);
 
+      // DŮLEŽITÉ: Odvození a uložení šifrovacího klíče do paměti
+      // Předáváme encryption_salt přímo, protože ještě není v localStorage
+      const keyDerived = await encryptionKeyManager.deriveAndStoreKey(password, encryption_salt);
+      if (!keyDerived) {
+        return {
+          error: {
+            detail: 'Nepodařilo se odvodit šifrovací klíč',
+            status: 500
+          }
+        };
+      }
+
       // Přidání encryption saltu k odpovědi
       return {
         data: {
@@ -92,8 +105,7 @@ export class AuthService {
         }
       };
     } catch (error: any) {
-	
-	  let errorMessage = 'Chyba při přihlášení';
+      let errorMessage = 'Chyba při přihlášení';
       
       if (error.status === 401) {
         errorMessage = 'Nesprávné uživatelské jméno nebo heslo';
@@ -106,8 +118,7 @@ export class AuthService {
       } else if (error.error?.detail) {
         errorMessage = error.error.detail;
       } else if (error.message && !error.status) {
-        // Síťová chyba (např. fetch failed)
-        errorMessage = 'Chyba serveru';
+        errorMessage = 'Nepodařilo se připojit k serveru. Zkontrolujte internetové připojení.';
       }
 
       return {
@@ -117,5 +128,13 @@ export class AuthService {
         }
       };
     }
+  }
+
+  /**
+   * Opětovné odvození klíče (když uživatel zadá master heslo)
+   */
+  static async rederiveKey(masterPassword: string): Promise<boolean> {
+    // Zde používáme bez parametru, salt se načte z localStorage
+    return await encryptionKeyManager.deriveAndStoreKey(masterPassword);
   }
 }

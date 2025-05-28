@@ -26,7 +26,7 @@ def create_user(db: Session, user: schemas.UserCreate):
         db.add(user_role)
         db.commit()
         db.refresh(user_role)
-    
+
     db_user = database.User(
         username=user.username,
         login_password_hash=user.login_password_hash,
@@ -78,11 +78,13 @@ def get_credential(db: Session, credential_id: int, user_id: int):
 def create_credential(db: Session, credential: schemas.CredentialCreate, user_id: int):
     db_credential = database.Credential(
         user_id=user_id,
-        encrypted_title=credential.encrypted_title,
+        title=credential.title,
+        url=credential.url,
+        username=credential.username,
         encrypted_data=credential.encrypted_data,
         encryption_iv=credential.encryption_iv
     )
-    
+
     # Add categories if provided
     if credential.category_ids:
         categories = db.query(database.PasswordCategory).filter(
@@ -92,7 +94,7 @@ def create_credential(db: Session, credential: schemas.CredentialCreate, user_id
             )
         ).all()
         db_credential.categories.extend(categories)
-    
+
     db.add(db_credential)
     db.commit()
     db.refresh(db_credential)
@@ -103,15 +105,19 @@ def update_credential(db: Session, credential_id: int, user_id: int, credential:
     db_credential = db.query(database.Credential).filter(
         and_(database.Credential.id == credential_id, database.Credential.user_id == user_id)
     ).first()
-    
+
     if db_credential:
-        if credential.encrypted_title is not None:
-            db_credential.encrypted_title = credential.encrypted_title
+        if credential.title is not None:
+            db_credential.title = credential.title
+        if credential.url is not None:
+            db_credential.url = credential.url
+        if credential.username is not None:
+            db_credential.username = credential.username
         if credential.encrypted_data is not None:
             db_credential.encrypted_data = credential.encrypted_data
         if credential.encryption_iv is not None:
             db_credential.encryption_iv = credential.encryption_iv
-        
+
         # Update categories if provided
         if credential.category_ids is not None:
             categories = db.query(database.PasswordCategory).filter(
@@ -122,10 +128,10 @@ def update_credential(db: Session, credential_id: int, user_id: int, credential:
             ).all()
             db_credential.categories.clear()
             db_credential.categories.extend(categories)
-        
+
         db.commit()
         db.refresh(db_credential)
-    
+
     return db_credential
 
 
@@ -133,7 +139,7 @@ def delete_credential(db: Session, credential_id: int, user_id: int):
     db_credential = db.query(database.Credential).filter(
         and_(database.Credential.id == credential_id, database.Credential.user_id == user_id)
     ).first()
-    
+
     if db_credential:
         db.delete(db_credential)
         db.commit()
@@ -171,7 +177,7 @@ def update_secure_note(db: Session, note_id: int, user_id: int, note: schemas.Se
     db_note = db.query(database.SecureNote).filter(
         and_(database.SecureNote.id == note_id, database.SecureNote.user_id == user_id)
     ).first()
-    
+
     if db_note:
         if note.encrypted_title is not None:
             db_note.encrypted_title = note.encrypted_title
@@ -179,10 +185,10 @@ def update_secure_note(db: Session, note_id: int, user_id: int, note: schemas.Se
             db_note.encrypted_content = note.encrypted_content
         if note.encryption_iv is not None:
             db_note.encryption_iv = note.encryption_iv
-        
+
         db.commit()
         db.refresh(db_note)
-    
+
     return db_note
 
 
@@ -190,7 +196,7 @@ def delete_secure_note(db: Session, note_id: int, user_id: int):
     db_note = db.query(database.SecureNote).filter(
         and_(database.SecureNote.id == note_id, database.SecureNote.user_id == user_id)
     ).first()
-    
+
     if db_note:
         db.delete(db_note)
         db.commit()
@@ -227,16 +233,16 @@ def update_category(db: Session, category_id: int, user_id: int, category: schem
     db_category = db.query(database.PasswordCategory).filter(
         and_(database.PasswordCategory.id == category_id, database.PasswordCategory.user_id == user_id)
     ).first()
-    
+
     if db_category:
         if category.name is not None:
             db_category.name = category.name
         if category.color_hex is not None:
             db_category.color_hex = category.color_hex
-        
+
         db.commit()
         db.refresh(db_category)
-    
+
     return db_category
 
 
@@ -244,7 +250,7 @@ def delete_category(db: Session, category_id: int, user_id: int):
     db_category = db.query(database.PasswordCategory).filter(
         and_(database.PasswordCategory.id == category_id, database.PasswordCategory.user_id == user_id)
     ).first()
-    
+
     if db_category:
         db.delete(db_category)
         db.commit()
@@ -256,7 +262,7 @@ def delete_category(db: Session, category_id: int, user_id: int):
 def create_audit_log(db: Session, user_id: Optional[int], action: str, resource_type: Optional[str] = None, 
                     resource_id: Optional[str] = None, details: Optional[dict] = None):
     details_json = json.dumps(details) if details else None
-    
+
     db_log = database.AuditLog(
         user_id=user_id,
         action=action,

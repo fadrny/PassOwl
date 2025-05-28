@@ -36,14 +36,14 @@ class RoleBase(BaseModel):
 
 class Role(RoleBase):
     model_config = ConfigDict(from_attributes=True)
-    
+
     id: int
 
 
 # User schema with roles (defined after Role)
 class User(UserBase):
     model_config = ConfigDict(from_attributes=True)
-    
+
     id: int
     avatar_url: Optional[str] = None
     created_at: datetime
@@ -68,14 +68,16 @@ class PasswordCategoryUpdate(BaseModel):
 
 class PasswordCategory(PasswordCategoryBase):
     model_config = ConfigDict(from_attributes=True)
-    
+
     id: int
     user_id: int
 
 
 # Credential schemas (defined after PasswordCategory)
 class CredentialBase(BaseModel):
-    encrypted_title: str
+    title: str
+    url: Optional[str] = None
+    username: str
     encrypted_data: str
     encryption_iv: str
 
@@ -85,7 +87,9 @@ class CredentialCreate(CredentialBase):
 
 
 class CredentialUpdate(BaseModel):
-    encrypted_title: Optional[str] = None
+    title: Optional[str] = None
+    url: Optional[str] = None
+    username: Optional[str] = None
     encrypted_data: Optional[str] = None
     encryption_iv: Optional[str] = None
     category_ids: Optional[List[int]] = None
@@ -93,7 +97,7 @@ class CredentialUpdate(BaseModel):
 
 class Credential(CredentialBase):
     model_config = ConfigDict(from_attributes=True)
-    
+
     id: int
     user_id: int
     created_at: datetime
@@ -120,7 +124,7 @@ class SecureNoteUpdate(BaseModel):
 
 class SecureNote(SecureNoteBase):
     model_config = ConfigDict(from_attributes=True)
-    
+
     id: int
     user_id: int
     created_at: datetime
@@ -137,7 +141,7 @@ class AuditLogBase(BaseModel):
 
 class AuditLog(AuditLogBase):
     model_config = ConfigDict(from_attributes=True)
-    
+
     id: int
     user_id: Optional[int] = None
     created_at: datetime

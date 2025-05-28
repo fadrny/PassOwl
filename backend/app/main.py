@@ -9,7 +9,7 @@ load_dotenv()
 
 app = FastAPI(
     title="PassOwl API",
-    description="Secure password manager with client-side encryption",
+    description="E2E šifrové ukládání hesel",
     version="1.0.0"
 )
 

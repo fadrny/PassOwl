@@ -51,7 +51,9 @@ CREATE TABLE password_categories (
 CREATE TABLE credentials (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    encrypted_title TEXT NOT NULL,
+    title TEXT NOT NULL,
+    url TEXT,
+    username TEXT NOT NULL,
     encrypted_data TEXT NOT NULL,
     encryption_iv VARCHAR(24) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

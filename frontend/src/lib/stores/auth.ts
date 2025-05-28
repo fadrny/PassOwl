@@ -1,6 +1,6 @@
 import { writable } from 'svelte/store';
 import { browser } from '$app/environment';
-// Odebrat import api zde - způsobuje circular dependency
+import { encryptionKeyManager } from '$lib/services/encryption-key-manager';
 import type { AuthUser } from '$lib/types/auth';
 
 // Auth state
@@ -59,6 +59,9 @@ export class AuthStore {
 		localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
 		localStorage.removeItem(STORAGE_KEYS.USERNAME);
 		localStorage.removeItem(STORAGE_KEYS.ENCRYPTION_SALT);
+
+		// Vymazání šifrovacího klíče z paměti
+		encryptionKeyManager.clearKey();
 
 		// Dynamický import api klienta
 		import('$lib/services/api-client').then(({ api }) => {
