@@ -87,14 +87,14 @@ async function importKeyFromBase64(keyBase64: string): Promise<CryptoKey> {
 }
 
 /**
- * Šifruje data pomocí AES-256-GCM
+ * Šifruje data pomocí AES-256-GCM s možností předat vlastní IV
  */
-export async function encryptData(plaintext: string, encryptionKeyBase64: string): Promise<{ encryptedData: string; iv: string }> {
+export async function encryptData(plaintext: string, encryptionKeyBase64: string, customIv?: string): Promise<{ encryptedData: string; iv: string }> {
     const encoder = new TextEncoder();
     const data = encoder.encode(plaintext);
     
-    // Generování IV
-    const iv = await generateIV();
+    // Použijeme custom IV nebo vygenerujeme nový
+    const iv = customIv || await generateIV();
     const ivBuffer = Uint8Array.from(atob(iv), c => c.charCodeAt(0));
     
     // Import klíče
