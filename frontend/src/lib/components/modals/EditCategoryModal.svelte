@@ -116,10 +116,10 @@
             />
 
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
+                <label class="block text-sm font-medium text-gray-700 mb-2" for="color-select">
                     Barva kategorie
                 </label>
-                <div class="grid grid-cols-4 gap-3">
+                <div class="grid grid-cols-4 gap-3" id="color-select">
                     {#each CATEGORY_COLORS as color}
                         <button
                             type="button"
