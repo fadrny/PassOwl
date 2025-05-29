@@ -12,11 +12,13 @@
         passwordId?: number;
         initialData?: PasswordUpdateData;
         onPasswordUpdated?: () => void;
+        onPasswordDeleted?: () => void;
     }
 
-    let { open, onClose, passwordId, initialData, onPasswordUpdated }: Props = $props();
+    let { open, onClose, passwordId, initialData, onPasswordUpdated, onPasswordDeleted }: Props = $props();
 
     let loading = $state(false);
+    let deleting = $state(false);
     let errors: string[] = $state([]);
 
     let formData: PasswordUpdateData = $state({
@@ -62,6 +64,33 @@
             loading = false;
         }
     }
+
+    async function handleDelete() {
+        if (!passwordId) return;
+
+        const confirmed = confirm('Opravdu chcete smazat toto heslo? Tato akce je nevratná.');
+        if (!confirmed) return;
+
+        deleting = true;
+        errors = [];
+
+        try {
+            const result = await PasswordManager.deletePassword(passwordId);
+
+            if (result.error) {
+                errors = [result.error.detail];
+                return;
+            }
+
+            onPasswordDeleted?.();
+            handleClose();
+        } catch (err) {
+            console.error('Error deleting password:', err);
+            errors = ['Nastala neočekávaná chyba při mazání hesla'];
+        } finally {
+            deleting = false;
+        }
+    }
 </script>
 
 <Modal {open} onClose={handleClose} title="Upravit heslo">
@@ -101,13 +130,23 @@
     {/snippet}
 
     {#snippet footer()}
-        <div class="flex justify-end space-x-3">
-            <Button variant="secondary" onclick={handleClose} disabled={loading}>
-                Zrušit
+        <div class="flex justify-between">
+            <Button 
+                variant="danger" 
+                onclick={handleDelete} 
+                disabled={loading || deleting}
+                loading={deleting}
+            >
+                {deleting ? 'Mazání...' : 'Smazat heslo'}
             </Button>
-            <Button variant="primary" onclick={handleSubmit} disabled={loading} loading={loading}>
-                {loading ? 'Ukládání...' : 'Uložit změny'}
-            </Button>
+            <div class="flex space-x-3">
+                <Button variant="secondary" onclick={handleClose} disabled={loading || deleting}>
+                    Zrušit
+                </Button>
+                <Button variant="primary" onclick={handleSubmit} disabled={loading || deleting} loading={loading}>
+                    {loading ? 'Ukládání...' : 'Uložit změny'}
+                </Button>
+            </div>
         </div>
     {/snippet}
 </Modal>

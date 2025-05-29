@@ -1,6 +1,6 @@
 <script lang="ts">
 	interface Props {
-		type?: 'text' | 'password' | 'email';
+		type?: 'text' | 'password' | 'email' | 'url';
 		name: string;
 		id: string;
 		label: string;
@@ -46,3 +46,4 @@
 		<p class="mt-1 text-sm text-red-600">{error}</p>
 	{/if}
 </div>
+

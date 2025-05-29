@@ -13,7 +13,9 @@
 	<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 		<div class="flex justify-between h-16">
 			<div class="flex items-center">
-				<h1 class="text-xl font-semibold">🦉 PassOwl Dashboard</h1>
+				<a href="/dashboard" >
+					<h1 class="text-xl font-semibold">🦉 PassOwl Dashboard</h1>
+				</a>
 			</div>
 			<div class="flex items-center space-x-4">
 				<span class="text-gray-700">Vítejte, {$authUser.username}</span>
