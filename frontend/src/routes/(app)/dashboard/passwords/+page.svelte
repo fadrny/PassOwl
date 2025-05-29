@@ -6,6 +6,7 @@
     import type { DecryptedPassword } from '$lib/services/password-manager';
     import PasswordTable from '$lib/components/tables/PasswordTable.svelte';
     import AddPasswordModal from '$lib/components/modals/AddPasswordModal.svelte';
+    import EditPasswordModal from '$lib/components/modals/EditPasswordModal.svelte';
     import Button from '$lib/components/ui/Button.svelte';
     import ErrorMessage from '$lib/components/ui/ErrorMessage.svelte';
 
@@ -17,6 +18,9 @@
     let loading = $state(true);
     let error: string | null = $state(null);
     let showAddModal = $state(false);
+    let showEditModal = $state(false);
+    let editingPasswordId: number | undefined = $state(undefined);
+    let editingPasswordData: PasswordUpdateData | undefined = $state(undefined);
 
     // Načtení hesel při načtení komponenty
     onMount(() => {
@@ -102,8 +106,20 @@
     }
 
     function handleEdit(id: string) {
-        console.log('Edit password:', id);
-        // TODO: Implementovat editaci hesla
+        const passwordId = parseInt(id);
+        const password = passwords.find(p => p.id === passwordId);
+        
+        if (password) {
+            editingPasswordId = passwordId;
+            editingPasswordData = {
+                title: password.title,
+                username: password.username,
+                password: '', // Bude potřeba dešifrovat
+                url: password.url,
+                categoryIds: password.categories?.map(c => c.id) || []
+            };
+            showEditModal = true;
+        }
     }
 
     function handleShare(id: string) {
@@ -165,5 +181,13 @@
     open={showAddModal} 
     onClose={() => showAddModal = false}
     onPasswordAdded={handlePasswordAdded}
+/>
+
+<EditPasswordModal
+    open={showEditModal}
+    onClose={() => showEditModal = false}
+    passwordId={editingPasswordId}
+    initialData={editingPasswordData}
+    onPasswordUpdated={loadPasswords}
 />
 
