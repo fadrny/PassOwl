@@ -114,6 +114,14 @@
             handleClose();
         }
     }
+
+    function handleBackdropKeydown(event: KeyboardEvent) {
+        // Close on Enter or Space if the backdrop itself is the target
+        if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
+            event.preventDefault(); // Prevent default browser action for space/enter
+            handleClose();
+        }
+    }
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
@@ -121,16 +129,20 @@
 {#if open}
     <!-- Backdrop -->
     <div
-        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+        class="fixed inset-0 backdrop-blur flex items-center justify-center p-4 z-50"
         onclick={handleBackdropClick}
+        onkeydown={handleBackdropKeydown}
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
+        tabindex="-1"
     >
         <!-- Modal Content -->
         <div
             class="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto"
             onclick={(e) => e.stopPropagation()}
+            onkeydown={(e) => e.stopPropagation()}
+            role="presentation"
         >
             <!-- Header -->
             <div class="px-6 py-4 border-b border-gray-200">
@@ -142,6 +154,7 @@
                         type="button"
                         class="text-gray-400 hover:text-gray-600 focus:outline-none focus:text-gray-600"
                         onclick={handleClose}
+                        aria-label="Zavřít"
                     >
                         <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path
