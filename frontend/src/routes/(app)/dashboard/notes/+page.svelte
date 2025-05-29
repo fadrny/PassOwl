@@ -7,7 +7,7 @@
     import EditNoteModal from '$lib/components/modals/EditNoteModal.svelte';
     import { NotesManager, type DecryptedNote } from '$lib/services/notes-manager';
     import type { SecureNote } from '$lib/services/api';
-	import PageHeader from '$lib/components/layout/PageHeader.svelte';
+    import PageHeader from '$lib/components/layout/PageHeader.svelte';
 
     // Typ pro display item
     type DisplayItem = {
@@ -20,7 +20,7 @@
     let notes: SecureNote[] = $state([]);
     let decryptedNotes = $state(new Map<number, DecryptedNote>());
     let decryptingNotes = $state(new Set<number>());
-    let loading = $state(false);
+    let initialLoading = $state(false); // Jen pro první načtení
     let error: string | null = $state(null);
     let showAddModal = $state(false);
     let showEditModal = $state(false);
@@ -31,7 +31,7 @@
     });
 
     async function loadNotes() {
-        loading = true;
+        initialLoading = true;
         error = null;
         decryptedNotes.clear();
         decryptingNotes.clear();
@@ -46,21 +46,17 @@
 
             notes = result.data || [];
             
-            // Seřadíme poznámky od nejnovější po nejstarší
-            notes.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+            initialLoading = false;
             
-            // Automaticky zahájíme postupné dešifrování
             if (NotesManager.isEncryptionKeyAvailable()) {
-                await decryptNotesProgressively();
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                decryptNotesProgressively();
             } else {
                 console.warn('Encryption key not available');
             }
         } catch (err) {
             console.error('Error loading notes:', err);
             error = 'Nepodařilo se načíst poznámky';
-        } finally {
-            loading = false;
+            initialLoading = false;
         }
     }
 
@@ -74,7 +70,7 @@
                 const result = await NotesManager.decryptNote(note);
                 
                 if (result.data) {
-                    // Úspěšně dešifrováno - přidáme do mapy a odebereme z "dešifruje se"
+                    // Úspěšně dešifrováno - přidáme do mapy
                     decryptedNotes.set(note.id, result.data);
                     decryptedNotes = new Map(decryptedNotes);
                 } else {
@@ -82,14 +78,14 @@
                 }
             } catch (err) {
                 console.error(`Error decrypting note ${note.id}:`, err);
-            } finally {
-                // Odebereme z "dešifruje se"
-                decryptingNotes.delete(note.id);
-                decryptingNotes = new Set(decryptingNotes);
-                
-                // Malá pauza pro plynulé zobrazování
-                await new Promise(resolve => setTimeout(resolve, 100));
             }
+
+            // Odebereme z "dešifruje se"
+            decryptingNotes.delete(note.id);
+            decryptingNotes = new Set(decryptingNotes);
+            
+            // Kratší pauza pro plynulé zobrazování
+            await new Promise(resolve => setTimeout(resolve, 250));
         }
     }
 
@@ -113,6 +109,13 @@
         showEditModal = false;
     }
 
+    // Generujeme fixní varianty pro konzistentní zobrazení
+    function getSkeletonVariant(noteId: number): 'short' | 'medium' | 'long' {
+        // Použijeme ID pro konzistentní variantu
+        const variants: ('short' | 'medium' | 'long')[] = ['short', 'medium', 'long'];
+        return variants[noteId % 3];
+    }
+
     // Renderovaná data pro zobrazení (kombinace dešifrovaných a loading)
     const displayItems = $derived(() => {
         const items: DisplayItem[] = [];
@@ -125,13 +128,12 @@
                     note: decryptedNotes.get(note.id)!,
                     id: note.id
                 });
-            } else if (decryptingNotes.has(note.id)) {
-                // Dešifruje se - skeleton
-                const variant = Math.random() > 0.6 ? 'long' : Math.random() > 0.3 ? 'medium' : 'short';
+            } else {
+                // Ještě nedešifrovaná - skeleton (ať už se dešifruje nebo ne)
                 items.push({
                     type: 'skeleton',
                     id: note.id,
-                    variant
+                    variant: getSkeletonVariant(note.id)
                 });
             }
         }
@@ -145,7 +147,6 @@
 </svelte:head>
 
 <div class="space-y-6">
-    
     <PageHeader 
         title="Poznámky"
         description="Tady jsou Vaše poznámky v bezpečí."
@@ -153,8 +154,16 @@
         onButtonClick={() => showAddModal = true}
     />
 
+    <!-- Debug info -->
+    {#if import.meta.env.DEV}
+        <div class="bg-gray-100 p-2 text-xs">
+            Debug: notes={notes.length}, decrypted={decryptedNotes.size}, decrypting={decryptingNotes.size}, 
+            keyAvailable={NotesManager.isEncryptionKeyAvailable()}, displayItems={displayItems.length}
+        </div>
+    {/if}
+
     <!-- Content -->
-    {#if loading}
+    {#if initialLoading}
         <div class="flex items-center justify-center py-12">
             <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             <span class="ml-2 text-gray-600">Načítání poznámek...</span>
@@ -189,7 +198,9 @@
         <div class="columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4">
             {#each displayItems() as item (item.id)}
                 {#if item.type === 'note' && item.note}
-                    <NoteCard note={item.note} onEdit={handleEdit} />
+                    <div class="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <NoteCard note={item.note} onEdit={handleEdit} />
+                    </div>
                 {:else if item.type === 'skeleton'}
                     <NoteCardSkeleton variant={item.variant} />
                 {/if}
