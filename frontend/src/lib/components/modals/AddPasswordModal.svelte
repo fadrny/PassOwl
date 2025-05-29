@@ -1,6 +1,7 @@
 <script lang="ts">
     import { PasswordManager } from '$lib/services/password-manager';
     import type { PasswordCreateData } from '$lib/services/password-manager';
+    import { reauthManager } from '$lib/services/reauth-manager';
     import Modal from '$lib/components/ui/Modal.svelte';
     import Button from '$lib/components/ui/Button.svelte';
     import Input from '$lib/components/ui/Input.svelte';
@@ -79,7 +80,14 @@
     async function handleSubmit() {
         if (!validateForm()) return;
 
+        // Kontrola dostupnosti šifrovacího klíče s možností re-auth
         if (!PasswordManager.isEncryptionKeyAvailable()) {
+            const reauthTriggered = reauthManager.requestReauth();
+            if (reauthTriggered) {
+                // Re-autentizace byla spuštěna, počkáme
+                return;
+            }
+            
             errors = ['Šifrovací klíč není dostupný. Obnovte stránku a přihlaste se znovu.'];
             return;
         }

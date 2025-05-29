@@ -83,12 +83,6 @@
             return;
         }
 
-        // Kontrola dostupnosti šifrovacího klíče
-        if (!PasswordManager.isEncryptionKeyAvailable()) {
-            alert('Šifrovací klíč není dostupný. Obnovte stránku a přihlaste se znovu.');
-            return;
-        }
-
         try {
             const result = await PasswordManager.decryptPassword(password);
             

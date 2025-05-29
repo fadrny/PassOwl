@@ -103,7 +103,6 @@
                 placeholder="Název poznámky"
                 required
                 bind:value={formData.title}
-                disabled={loading}
             />
 
             <div class="space-y-2">
