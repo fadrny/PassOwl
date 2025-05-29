@@ -1,5 +1,6 @@
 <script lang="ts">
     import Button from '$lib/components/ui/Button.svelte';
+    import { getCategoryColorName, getSafeColor } from '$lib/config/category-colors';
     import type { PasswordCategory } from '$lib/services/api';
 
     interface Props {
@@ -12,23 +13,6 @@
     function formatDate(dateString?: string): string {
         if (!dateString) return '';
         return new Date(dateString).toLocaleDateString('cs-CZ');
-    }
-
-    function getColorName(hex?: string | null): string {
-        if (!hex) return 'Šedá';
-        
-        const colorMap: Record<string, string> = {
-            '#EF4444': 'Červená',
-            '#F97316': 'Oranžová', 
-            '#EAB308': 'Žlutá',
-            '#22C55E': 'Zelená',
-            '#3B82F6': 'Modrá',
-            '#8B5CF6': 'Fialová',
-            '#EC4899': 'Růžová',
-            '#6B7280': 'Šedá'
-        };
-        
-        return colorMap[hex] || hex;
     }
 </script>
 
@@ -91,10 +75,10 @@
                                 <div class="flex items-center space-x-3">
                                     <div
                                         class="w-4 h-4 rounded-full border border-gray-300"
-                                        style="background-color: {category.color_hex || '#6B7280'}"
+                                        style="background-color: {getSafeColor(category.color_hex)}"
                                     ></div>
                                     <span class="text-sm text-gray-900">
-                                        {getColorName(category.color_hex)}
+                                        {getCategoryColorName(category.color_hex)}
                                     </span>
                                 </div>
                             </td>

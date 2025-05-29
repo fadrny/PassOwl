@@ -1,5 +1,6 @@
 <script lang="ts">
     import { CategoryManager } from '$lib/services/category-manager';
+    import { CATEGORY_COLORS, DEFAULT_CATEGORY_COLOR } from '$lib/config/category-colors';
     import type { CategoryCreateData } from '$lib/services/category-manager';
     import Modal from '$lib/components/ui/Modal.svelte';
     import Button from '$lib/components/ui/Button.svelte';
@@ -19,27 +20,15 @@
 
     let formData: CategoryCreateData = $state({
         name: '',
-        color_hex: '#3B82F6'
+        color_hex: DEFAULT_CATEGORY_COLOR
     });
-
-    // Přednastavené barvy
-    const colors = [
-        { name: 'Modrá', value: '#3B82F6' },
-        { name: 'Zelená', value: '#22C55E' },
-        { name: 'Červená', value: '#EF4444' },
-        { name: 'Žlutá', value: '#EAB308' },
-        { name: 'Fialová', value: '#8B5CF6' },
-        { name: 'Růžová', value: '#EC4899' },
-        { name: 'Oranžová', value: '#F97316' },
-        { name: 'Šedá', value: '#6B7280' }
-    ];
 
     // Reset formuláře při otevření modalu
     $effect(() => {
         if (open) {
             formData = {
                 name: '',
-                color_hex: '#3B82F6'
+                color_hex: DEFAULT_CATEGORY_COLOR
             };
             errors = [];
         }
@@ -109,23 +98,23 @@
             />
 
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2" for="color-hex">
+                <label class="block text-sm font-medium text-gray-700 mb-2" for="color-select">
                     Barva kategorie
                 </label>
-                <div class="grid grid-cols-4 gap-3 color-hex">
-                    {#each colors as color}
+                <div class="grid grid-cols-5 gap-3" id="color-select">
+                    {#each CATEGORY_COLORS as color}
                         <button
                             type="button"
-                            class="flex items-center space-x-2 p-2 rounded-md border transition-colors {formData.color_hex === color.value 
+                            class="flex flex-col items-center p-2 rounded-md border transition-colors {formData.color_hex === color.value 
                                 ? 'border-indigo-500 bg-indigo-50' 
                                 : 'border-gray-300 hover:bg-gray-50'}"
                             onclick={() => formData.color_hex = color.value}
                         >
                             <div
-                                class="w-4 h-4 rounded-full"
+                                class="w-6 h-6 rounded-full mb-1"
                                 style="background-color: {color.value}"
                             ></div>
-                            <span class="text-xs text-gray-700">{color.name}</span>
+                            <span class="text-xs text-gray-700 text-center">{color.name}</span>
                         </button>
                     {/each}
                 </div>

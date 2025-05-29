@@ -5,6 +5,7 @@
     import Button from '$lib/components/ui/Button.svelte';
     import Input from '$lib/components/ui/Input.svelte';
     import ErrorMessage from '$lib/components/ui/ErrorMessage.svelte';
+    import CategorySelect from '$lib/components/ui/CategorySelect.svelte';
 
     interface Props {
         open: boolean;
@@ -69,6 +70,10 @@
         }
         
         formData.password = password;
+    }
+
+    function handleCategoryChange(selectedIds: number[]) {
+        formData.categoryIds = selectedIds;
     }
 
     async function handleSubmit() {
@@ -161,6 +166,12 @@
                 label="URL"
                 placeholder="https://..."
                 bind:value={formData.url}
+            />
+
+            <CategorySelect
+                selectedIds={formData.categoryIds}
+                onSelectionChange={handleCategoryChange}
+                disabled={loading}
             />
 
             {#if errors.length > 0}

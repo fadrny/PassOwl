@@ -116,7 +116,7 @@
             editingPasswordData = {
                 title: password.title,
                 username: password.username,
-                password: '', // Bude potřeba dešifrovat
+                password: '', // Bude potřeba dešifrovat - uživatel může změnit
                 url: password.url,
                 categoryIds: password.categories?.map(c => c.id) || []
             };

@@ -1,5 +1,6 @@
 <script lang="ts">
     import { CategoryManager } from '$lib/services/category-manager';
+    import { CATEGORY_COLORS } from '$lib/config/category-colors';
     import type { CategoryUpdateData } from '$lib/services/category-manager';
     import Modal from '$lib/components/ui/Modal.svelte';
     import Button from '$lib/components/ui/Button.svelte';
@@ -25,18 +26,6 @@
         name: initialData?.name || '',
         color_hex: initialData?.color_hex || '#3B82F6'
     });
-
-    // Přednastavené barvy
-    const colors = [
-        { name: 'Modrá', value: '#3B82F6' },
-        { name: 'Zelená', value: '#22C55E' },
-        { name: 'Červená', value: '#EF4444' },
-        { name: 'Žlutá', value: '#EAB308' },
-        { name: 'Fialová', value: '#8B5CF6' },
-        { name: 'Růžová', value: '#EC4899' },
-        { name: 'Oranžová', value: '#F97316' },
-        { name: 'Šedá', value: '#6B7280' }
-    ];
 
     // Reset form when modal opens with new data
     $effect(() => {
@@ -127,11 +116,11 @@
             />
 
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2" for="color-hex">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
                     Barva kategorie
                 </label>
-                <div class="grid grid-cols-4 gap-3 color-hex">
-                    {#each colors as color}
+                <div class="grid grid-cols-4 gap-3">
+                    {#each CATEGORY_COLORS as color}
                         <button
                             type="button"
                             class="flex items-center space-x-2 p-2 rounded-md border transition-colors {formData.color_hex === color.value 
