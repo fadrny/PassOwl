@@ -3,7 +3,7 @@
 		type?: 'text' | 'password' | 'email' | 'url';
 		name: string;
 		id: string;
-		label: string;
+		label: string | undefined;
 		value: string;
 		placeholder?: string;
 		required?: boolean;
