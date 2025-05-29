@@ -4,9 +4,11 @@
     import type { PageData } from './$types';
     import type { Credential } from '$lib/services/api';
     import type { DecryptedPassword } from '$lib/services/password-manager';
+    import type { PasswordUpdateData } from '$lib/services/password-manager';
     import PasswordTable from '$lib/components/tables/PasswordTable.svelte';
     import AddPasswordModal from '$lib/components/modals/AddPasswordModal.svelte';
     import EditPasswordModal from '$lib/components/modals/EditPasswordModal.svelte';
+    import PageHeader from '$lib/components/layout/PageHeader.svelte';
     import Button from '$lib/components/ui/Button.svelte';
     import ErrorMessage from '$lib/components/ui/ErrorMessage.svelte';
 
@@ -114,7 +116,7 @@
             editingPasswordData = {
                 title: password.title,
                 username: password.username,
-                password: '', // Bude potřeba dešifrovat
+                password: '', // Bude potřeba dešifrovat - uživatel může změnit
                 url: password.url,
                 categoryIds: password.categories?.map(c => c.id) || []
             };
@@ -138,22 +140,12 @@
 </svelte:head>
 
 <div class="space-y-6">
-    <div class="flex items-center justify-between">
-        <div>
-            <h1 class="text-2xl font-bold text-gray-900">Hesla</h1>
-            <p class="mt-1 text-sm text-gray-600">
-                Spravujte svá hesla bezpečně s end-to-end šifrováním
-            </p>
-        </div>
-        <Button 
-            type="button" 
-            variant="primary" 
-            size="lg"
-            onclick={() => showAddModal = true}
-        >
-            Přidat nové heslo
-        </Button>
-    </div>
+    <PageHeader 
+        title="Hesla"
+        description="Spravujte svá hesla bezpečně a na jednom místě."
+        buttonText="Přidat nové heslo"
+        onButtonClick={() => showAddModal = true}
+    />
 
     {#if error}
         <ErrorMessage message={error} />
@@ -189,5 +181,6 @@
     passwordId={editingPasswordId}
     initialData={editingPasswordData}
     onPasswordUpdated={loadPasswords}
+    onPasswordDeleted={loadPasswords}
 />
 

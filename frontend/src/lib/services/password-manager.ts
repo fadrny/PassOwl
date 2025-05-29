@@ -36,7 +36,7 @@ export interface PasswordUpdateData {
   title?: string;
   username?: string;
   password?: string;       // bude zašifrováno do encrypted_data
-  url?: string;
+  url?: string | null;
   categoryIds?: number[];
 }
 

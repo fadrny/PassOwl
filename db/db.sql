@@ -67,6 +67,19 @@ CREATE TABLE credential_category_links (
     PRIMARY KEY (credential_id, category_id)
 );
 
+CREATE TABLE audit_logs
+(
+    id SERIAL PRIMARY KEY,
+    user_id       integer,
+    action        VARCHAR(100) NOT NULL,
+    resource_type VARCHAR(50),
+    resource_id   VARCHAR(50),
+    details       TEXT,
+    created_at    TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX ix_audit_logs_id ON audit_logs(id);
+
 -- Create secure_notes table
 CREATE TABLE secure_notes (
     id SERIAL PRIMARY KEY,

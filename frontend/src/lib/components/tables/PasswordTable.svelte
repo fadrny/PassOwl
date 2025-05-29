@@ -148,7 +148,6 @@
                                         variant="ghost"
                                         size="sm"
                                         onclick={() => copyToClipboard(password.username)}
-                                        title="Kopírovat uživatelské jméno"
                                     >
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path
@@ -171,7 +170,6 @@
                                             variant="ghost"
                                             size="sm"
                                             onclick={() => copyToClipboard(password.decryptedPassword || '')}
-                                            title="Kopírovat heslo"
                                         >
                                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path
@@ -190,7 +188,6 @@
                                         variant="ghost"
                                         size="sm"
                                         onclick={() => handleDecrypt(password.id)}
-                                        title={decryptedPasswordIds.has(password.id) ? 'Skrýt heslo' : 'Zobrazit heslo'}
                                     >
                                         {#if decryptedPasswordIds.has(password.id)}
                                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -241,7 +238,6 @@
                                         variant="ghost"
                                         size="sm"
                                         onclick={() => onEdit?.(password.id)}
-                                        title="Upravit heslo"
                                     >
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path
@@ -257,7 +253,6 @@
                                         variant="ghost"
                                         size="sm"
                                         onclick={() => onShare?.(password.id)}
-                                        title="Sdílet heslo"
                                     >
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path
