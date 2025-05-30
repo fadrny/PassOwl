@@ -2,7 +2,7 @@
     import { CategoryManager } from '$lib/services/category-manager';
     import { CATEGORY_COLORS, DEFAULT_CATEGORY_COLOR } from '$lib/config/category-colors';
     import type { CategoryCreateData } from '$lib/services/category-manager';
-    import Modal from '$lib/components/ui/Modal.svelte';
+    import Modal from '$lib/components/modals/Modal.svelte';
     import Button from '$lib/components/ui/Button.svelte';
     import Input from '$lib/components/ui/Input.svelte';
     import ErrorMessage from '$lib/components/ui/ErrorMessage.svelte';

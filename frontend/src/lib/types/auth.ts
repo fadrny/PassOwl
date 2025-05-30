@@ -32,4 +32,5 @@ export interface SaltsResponse {
 export interface AuthUser {
 	username: string;
 	isLoggedIn: boolean;
+	avatarUrl?: string; // Přidáme pouze toto
 }

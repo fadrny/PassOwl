@@ -7,7 +7,7 @@ import { generateEncryptionKey } from './crypto';
 class EncryptionKeyManager {
     private encryptionKey: string | null = null;
     private keyDerivedAt: number | null = null;
-    private readonly KEY_LIFETIME_MS = 30 * 60 * 1000; // 30 minut
+    private readonly KEY_LIFETIME_MS = 10 * 60 * 1000; // 10 minut
 
     /**
      * Odvození a uložení šifrovacího klíče do paměti
@@ -20,7 +20,7 @@ class EncryptionKeyManager {
             let salt = encryptionSalt;
             if (!salt) {
                 const { AuthStore } = await import('$lib/stores/auth');
-                salt = AuthStore.getEncryptionSalt();
+                salt = AuthStore.getEncryptionSalt() || undefined;
             }
 
             if (!salt) {

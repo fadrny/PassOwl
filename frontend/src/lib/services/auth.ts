@@ -1,14 +1,8 @@
 import { api } from './api-client';
-import { generateSalt, generateLoginHash } from './crypto';
+import { generateSalt, generateLoginHash, generateEncryptionKey } from './crypto';
 import { encryptionKeyManager } from './encryption-key-manager';
-import type {
-  LoginCredentials,
-  RegisterCredentials,
-  UserCreate,
-  UserLogin,
-  UserSalts,
-  Token
-} from './api';
+import type { LoginCredentials, RegisterCredentials } from '$lib/types/auth';
+import type { UserCreate, UserLogin, UserSalts, Token } from './api';
 import type { ApiResponse } from '$lib/types/api';
 
 export class AuthService {
@@ -131,10 +125,125 @@ export class AuthService {
   }
 
   /**
-   * Opětovné odvození klíče (když uživatel zadá master heslo)
+   * Opětovné odvození klíče s ověřením hesla přes backend
    */
   static async rederiveKey(masterPassword: string): Promise<boolean> {
-    // Zde používáme bez parametru, salt se načte z localStorage
-    return await encryptionKeyManager.deriveAndStoreKey(masterPassword);
+    try {
+      // Nejdříve musíme ověřit heslo přes backend
+      const authResult = await this.verifyPasswordAndGetNewToken(masterPassword);
+      
+      if (!authResult.success) {
+        console.error('Ověření hesla selhalo:', authResult.error);
+        return false;
+      }
+
+      // Teprve po úspěšném ověření odvozujeme klíč
+      const keySuccess = await encryptionKeyManager.deriveAndStoreKey(masterPassword);
+      
+      if (!keySuccess) {
+        console.error('Odvození klíče selhalo i přes správné heslo');
+        return false;
+      }
+
+      console.log('🔑 Klíč byl úspěšně znovu odvozen s novým JWT tokenem');
+      return true;
+    } catch (error) {
+      console.error('Error during reauth:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Ověření hesla přes backend a získání nového JWT tokenu
+   */
+  private static async verifyPasswordAndGetNewToken(masterPassword: string): Promise<{
+    success: boolean;
+    error?: string;
+    token?: string;
+  }> {
+    try {
+      // Získáme aktuální username z localStorage
+      const { AuthStore } = await import('$lib/stores/auth');
+      const currentToken = AuthStore.getAccessToken();
+      
+      if (!currentToken) {
+        return { success: false, error: 'Chybí přihlašovací token' };
+      }
+
+      // Dekódujeme JWT token pro získání username (jednoduché dekódování bez verifikace)
+      const payload = this.decodeJwtPayload(currentToken);
+      if (!payload || !payload.sub) {
+        return { success: false, error: 'Neplatný token' };
+      }
+
+      const username = payload.sub;
+
+      // Získání saltů pro uživatele
+      const saltsResponse = await api.auth.getUserSaltsAuthSaltsGet({ username });
+      const salts = saltsResponse.data as UserSalts;
+      const { login_salt } = salts;
+
+      // Generování login hashe pro ověření
+      const loginPasswordHash = await generateLoginHash(masterPassword, login_salt);
+
+      const loginRequest: UserLogin = {
+        username,
+        login_password_hash: loginPasswordHash
+      };
+
+      // Pokus o přihlášení (ověření hesla)
+      const loginResponse = await api.auth.loginUserAuthLoginPost(loginRequest);
+      const token = loginResponse.data as Token;
+
+      // Aktualizace tokenu v aplikaci
+      api.setSecurityData(token.access_token);
+      AuthStore.setAuthData(token.access_token, username, AuthStore.getEncryptionSalt()!);
+
+      return { 
+        success: true, 
+        token: token.access_token 
+      };
+    } catch (error: any) {
+      let errorMessage = 'Ověření hesla selhalo';
+      
+      if (error.status === 401) {
+        errorMessage = 'Nesprávné heslo';
+      } else if (error.status === 404) {
+        errorMessage = 'Uživatel nenalezen';
+      } else if (error.error?.detail) {
+        errorMessage = error.error.detail;
+      }
+
+      return { 
+        success: false, 
+        error: errorMessage 
+      };
+    }
+  }
+
+  /**
+   * Jednoduché dekódování JWT payload (bez verifikace)
+   */
+  private static decodeJwtPayload(token: string): any {
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) {
+        return null;
+      }
+
+      const payload = parts[1];
+      const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+      return JSON.parse(decoded);
+    } catch (error) {
+      console.error('Error decoding JWT:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Opětovné odvození klíče s refreshem JWT tokenu (alias pro zpětnou kompatibilitu)
+   */
+  static async rederiveKeyWithTokenRefresh(masterPassword: string): Promise<boolean> {
+    return this.rederiveKey(masterPassword);
   }
 }
