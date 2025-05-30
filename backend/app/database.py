@@ -102,6 +102,8 @@ class PasswordCategory(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     name = Column(String(100), nullable=False)
     color_hex = Column(String(7), nullable=True)  # Format: #RRGGBB
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     # Relationships
     owner = relationship("User", back_populates="categories")
