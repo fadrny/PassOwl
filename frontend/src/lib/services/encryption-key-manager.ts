@@ -20,7 +20,7 @@ class EncryptionKeyManager {
             let salt = encryptionSalt;
             if (!salt) {
                 const { AuthStore } = await import('$lib/stores/auth');
-                salt = AuthStore.getEncryptionSalt();
+                salt = AuthStore.getEncryptionSalt() || undefined;
             }
 
             if (!salt) {

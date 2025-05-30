@@ -4,7 +4,7 @@ import { AuthStore } from '$lib/stores/auth';
 import { goto } from '$app/navigation';
 
 class ReauthManager {
-    private checkInterval: number | null = null;
+    private checkInterval: ReturnType<typeof setInterval> | null = null;
     private readonly CHECK_INTERVAL_MS = 60 * 1000; // kontrola každou minutu
 
     // Store pro řízení UI

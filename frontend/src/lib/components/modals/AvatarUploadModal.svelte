@@ -79,9 +79,6 @@
             // Aktualizace avatar URL v store
             AuthStore.updateAvatarUrl(result.url);
             
-            // TODO: Poslat novou URL na FastAPI backend
-            // await updateUserAvatar(result.url);
-
             onAvatarUpdated?.();
             handleClose();
         } catch (err) {
