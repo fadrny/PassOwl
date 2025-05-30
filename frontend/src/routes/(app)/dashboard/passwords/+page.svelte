@@ -1,22 +1,18 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { PasswordManager } from '$lib/services/password-manager';
-    import type { PageData } from './$types';
-    import type { Credential } from '$lib/services/api';
-    import type { DecryptedPassword } from '$lib/services/password-manager';
-    import type { PasswordUpdateData } from '$lib/services/password-manager';
+    import { PasswordManager, type PasswordUpdateData } from '$lib/services/password-manager';
+    import { CategoryManager } from '$lib/services/category-manager';
+    import type { Credential, PasswordCategory } from '$lib/services/api';
     import PasswordTable from '$lib/components/tables/PasswordTable.svelte';
+    import PageHeader from '$lib/components/layout/PageHeader.svelte';
+    import ErrorMessage from '$lib/components/ui/ErrorMessage.svelte';
+    import Button from '$lib/components/ui/Button.svelte';
     import AddPasswordModal from '$lib/components/modals/AddPasswordModal.svelte';
     import EditPasswordModal from '$lib/components/modals/EditPasswordModal.svelte';
-    import PageHeader from '$lib/components/layout/PageHeader.svelte';
-    import Button from '$lib/components/ui/Button.svelte';
-    import ErrorMessage from '$lib/components/ui/ErrorMessage.svelte';
 
-    let { data }: { data: PageData } = $props();
-
-    // State
     let passwords: Credential[] = $state([]);
-    let decryptedPasswords: Map<number, DecryptedPassword> = $state(new Map());
+    let categories: PasswordCategory[] = $state([]);
+    let decryptedPasswords = $state(new Map<number, any>());
     let loading = $state(true);
     let error: string | null = $state(null);
     let showAddModal = $state(false);
@@ -24,17 +20,46 @@
     let editingPasswordId: number | undefined = $state(undefined);
     let editingPasswordData: PasswordUpdateData | undefined = $state(undefined);
 
+    // Nové stavy pro filtrování a řazení
+    let currentSort = $state({ by: '', direction: 'asc' });
+    let currentCategoryFilter: number | null = $state(null);
+
     // Načtení hesel při načtení komponenty
     onMount(() => {
+        loadCategories();
         loadPasswords();
     });
+
+    async function loadCategories() {
+        try {
+            const result = await CategoryManager.getCategories();
+            if (result.data) {
+                categories = result.data;
+            }
+        } catch (err) {
+            console.error('Error loading categories:', err);
+        }
+    }
 
     async function loadPasswords() {
         loading = true;
         error = null;
 
         try {
-            const result = await PasswordManager.getPasswords({ limit: 100 });
+            const params: any = { limit: 100 };
+            
+            // Přidání parametrů řazení
+            if (currentSort.by) {
+                params.sort_by = currentSort.by;
+                params.sort_direction = currentSort.direction;
+            }
+            
+            // Přidání filtru kategorie
+            if (currentCategoryFilter !== null) {
+                params.filter_category = currentCategoryFilter;
+            }
+
+            const result = await PasswordManager.getPasswords(params);
 
             if (result.error) {
                 error = result.error.detail;
@@ -42,6 +67,9 @@
             }
 
             passwords = result.data || [];
+            // Vyčistit dešifrovaná hesla při novém načtení
+            decryptedPasswords.clear();
+            decryptedPasswords = new Map(decryptedPasswords);
         } catch (err) {
             console.error('Error loading passwords:', err);
             error = 'Nepodařilo se načíst hesla';
@@ -50,35 +78,37 @@
         }
     }
 
-    // Transformace pro PasswordTable komponentu - použití $derived
-    const transformedPasswords = $derived(passwords.map(password => {
-        const decrypted = decryptedPasswords.get(password.id);
-        return {
-            id: password.id.toString(),
-            name: password.title,                    // plaintext z API
-            username: password.username,             // plaintext z API
-            encryptedPassword: password.encrypted_data,
-            decryptedPassword: decrypted?.password,  // dešifrované heslo
-            url: password.url,                       // plaintext z API
-            category: password.categories?.[0] ? {
-                id: password.categories[0].id.toString(),
-                name: password.categories[0].name,
-                color: password.categories[0].color_hex || 'gray'
-            } : undefined,
-            created_at: password.created_at,
-            updated_at: password.updated_at
-        };
-    }));
+    // Transformace pro PasswordTable komponentu
+    const transformedPasswords = $derived(
+        passwords.map(password => {
+            const decrypted = decryptedPasswords.get(password.id);
+            return {
+                id: password.id.toString(),
+                name: password.title,
+                username: password.username,
+                encryptedPassword: password.encrypted_data,
+                decryptedPassword: decrypted?.password,
+                url: password.url,
+                category: password.categories?.[0] ? {
+                    id: password.categories[0].id.toString(),
+                    name: password.categories[0].name,
+                    color: password.categories[0].color_hex || '#6B7280'
+                } : undefined,
+                created_at: password.created_at,
+                updated_at: password.updated_at
+            };
+        })
+    );
 
-    async function handleDecrypt(id: string) {
-        const passwordId = parseInt(id);
-        const password = passwords.find(p => p.id === passwordId);
+    async function handleDecrypt(passwordId: string) {
+        const id = parseInt(passwordId);
+        const password = passwords.find(p => p.id === id);
         
         if (!password) return;
 
         // Pokud je už dešifrováno, skryj ho
-        if (decryptedPasswords.has(passwordId)) {
-            decryptedPasswords.delete(passwordId);
+        if (decryptedPasswords.has(id)) {
+            decryptedPasswords.delete(id);
             decryptedPasswords = new Map(decryptedPasswords);
             return;
         }
@@ -92,13 +122,23 @@
             }
 
             if (result.data) {
-                decryptedPasswords.set(passwordId, result.data);
+                decryptedPasswords.set(id, result.data);
                 decryptedPasswords = new Map(decryptedPasswords);
             }
         } catch (err) {
             console.error('Error decrypting password:', err);
             alert('Nepodařilo se dešifrovat heslo');
         }
+    }
+
+    function handleSortChange(sortBy: string, direction: string) {
+        currentSort = { by: sortBy, direction };
+        loadPasswords();
+    }
+
+    function handleCategoryFilter(categoryId: number | null) {
+        currentCategoryFilter = categoryId;
+        loadPasswords();
     }
 
     function handleEdit(id: string) {
@@ -155,9 +195,14 @@
     {:else}
         <PasswordTable 
             passwords={transformedPasswords}
+            categories={categories}
             onDecrypt={handleDecrypt}
             onEdit={handleEdit}
             onShare={handleShare}
+            onSortChange={handleSortChange}
+            onCategoryFilter={handleCategoryFilter}
+            currentSort={currentSort}
+            currentCategoryFilter={currentCategoryFilter}
         />
     {/if}
 </div>
@@ -175,6 +220,5 @@
     passwordId={editingPasswordId}
     initialData={editingPasswordData}
     onPasswordUpdated={loadPasswords}
-    onPasswordDeleted={loadPasswords}
 />
 
