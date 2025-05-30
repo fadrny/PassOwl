@@ -1,8 +1,9 @@
 <script lang="ts">
-    import Modal from '../ui/Modal.svelte';
+    import Modal from './Modal.svelte';
     import Button from '../ui/Button.svelte';
     import ErrorMessage from '../ui/ErrorMessage.svelte';
     import { AuthStore } from '$lib/stores/auth';
+    import { api } from '$lib/services/api-client';
 
     interface Props {
         open: boolean;
@@ -61,26 +62,43 @@
         errors = [];
 
         try {
+            // 1. Nahrání do Cloudinary
             const formData = new FormData();
             formData.append('avatar', selectedFile);
 
-            const response = await fetch('/api/upload-avatar', {
+            const uploadResponse = await fetch('/api/upload-avatar', {
                 method: 'POST',
                 body: formData
             });
 
-            const result = await response.json();
+            const uploadResult = await uploadResponse.json();
 
-            if (!response.ok) {
-                errors = [result.error || 'Chyba při nahrávání'];
+            if (!uploadResponse.ok) {
+                errors = [uploadResult.error || 'Chyba při nahrávání'];
                 return;
             }
 
-            // Aktualizace avatar URL v store
-            AuthStore.updateAvatarUrl(result.url);
-            
-            onAvatarUpdated?.();
-            handleClose();
+            // 2. Aktualizace URL v databázi přes FastAPI
+            try {
+                const updateResponse = await api.users.updateUserAvatarUsersMeAvatarPut({
+                    avatar_url: uploadResult.url
+                });
+
+                // 3. Aktualizace avatar URL v local store
+                AuthStore.updateAvatarUrl(uploadResult.url);
+                
+                console.log('Avatar byl úspěšně aktualizován:', uploadResult.url);
+                
+                onAvatarUpdated?.();
+                handleClose();
+            } catch (apiError) {
+                console.error('Chyba při aktualizaci avatar URL v databázi:', apiError);
+                errors = ['Obrázek byl nahrán, ale nepodařilo se aktualizovat profil'];
+                
+                // I přes chybu aktualizujeme local store, protože obrázek byl nahrán
+                AuthStore.updateAvatarUrl(uploadResult.url);
+            }
+
         } catch (err) {
             console.error('Upload error:', err);
             errors = ['Nastala neočekávaná chyba při nahrávání'];
@@ -95,10 +113,11 @@
         <div class="space-y-4">
             <!-- File input -->
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
+                <label for="avatar-file-input" class="block text-sm font-medium text-gray-700 mb-2">
                     Vyberte obrázek
                 </label>
                 <input
+                    id="avatar-file-input"
                     type="file"
                     accept="image/*"
                     bind:this={fileInput}
@@ -130,7 +149,7 @@
     {/snippet}
 
     {#snippet footer()}
-        <div class="flex space-x-3">
+        <div class="flex space-x-3 justify-end">
             <Button variant="secondary" onclick={handleClose} disabled={loading}>
                 Zrušit
             </Button>

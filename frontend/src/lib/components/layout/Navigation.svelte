@@ -32,7 +32,11 @@
     }
 
     function getAvatarSrc() {
-        return $authUser.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent($authUser.username)}&background=6366f1&color=fff&size=40`;
+        if ($authUser.avatarUrl) {
+			return $authUser.avatarUrl;
+		}
+		// Pokud není avatar, použijeme defaultní obrázek
+		return `https://ui-avatars.com/api/?name=${encodeURIComponent($authUser.username)}&background=6366f1&color=fff&size=40`;
     }
 
     // Globální listener pro zavření dropdownu při kliknutí mimo

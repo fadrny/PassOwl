@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Modal from '../ui/Modal.svelte';
+    import Modal from './Modal.svelte';
     import Input from '../ui/Input.svelte';
     import Button from '../ui/Button.svelte';
     import ErrorMessage from '../ui/ErrorMessage.svelte';
