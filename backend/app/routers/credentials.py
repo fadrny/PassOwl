@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from .. import crud, schemas, database, auth
 
 router = APIRouter(prefix="/credentials", tags=["credentials"])
@@ -10,10 +10,13 @@ router = APIRouter(prefix="/credentials", tags=["credentials"])
 def get_credentials(
     skip: int = 0,
     limit: int = 100,
+    sort_by: str = None,
+    sort_direction: str = None,
+    filter_category: Optional[int] = None,
     current_user: database.User = Depends(auth.get_current_user),
     db: Session = Depends(database.get_db)
 ):
-    credentials = crud.get_credentials(db, user_id=current_user.id, skip=skip, limit=limit)
+    credentials = crud.get_credentials(db, user_id=current_user.id, skip=skip, limit=limit, sort_by=sort_by, sort_direction=sort_direction, filter_category=filter_category)
     return credentials
 
 
@@ -36,7 +39,7 @@ def create_credential(
     db: Session = Depends(database.get_db)
 ):
     db_credential = crud.create_credential(db=db, credential=credential, user_id=current_user.id)
-    
+
     # Log credential creation
     crud.create_audit_log(
         db=db,
@@ -45,7 +48,7 @@ def create_credential(
         resource_type="credential",
         resource_id=str(db_credential.id)
     )
-    
+
     return db_credential
 
 
@@ -64,7 +67,7 @@ def update_credential(
     )
     if db_credential is None:
         raise HTTPException(status_code=404, detail="Credential not found")
-    
+
     # Log credential update
     crud.create_audit_log(
         db=db,
@@ -73,7 +76,7 @@ def update_credential(
         resource_type="credential",
         resource_id=str(credential_id)
     )
-    
+
     return db_credential
 
 
@@ -86,7 +89,7 @@ def delete_credential(
     success = crud.delete_credential(db=db, credential_id=credential_id, user_id=current_user.id)
     if not success:
         raise HTTPException(status_code=404, detail="Credential not found")
-    
+
     # Log credential deletion
     crud.create_audit_log(
         db=db,
@@ -95,5 +98,5 @@ def delete_credential(
         resource_type="credential",
         resource_id=str(credential_id)
     )
-    
+
     return {"message": "Credential deleted successfully"}

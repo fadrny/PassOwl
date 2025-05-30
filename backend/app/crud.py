@@ -63,10 +63,32 @@ def create_role(db: Session, role_name: str):
 
 
 # Credential CRUD
-def get_credentials(db: Session, user_id: int, skip: int = 0, limit: int = 100):
-    return db.query(database.Credential).filter(
+def get_credentials(db: Session, user_id: int, skip: int = 0, limit: int = 100, sort_by: str = None, sort_direction: str = None, filter_category: Optional[int] = None):
+    query = db.query(database.Credential).filter(
         database.Credential.user_id == user_id
-    ).offset(skip).limit(limit).all()
+    )
+
+    # Filter by category if specified
+    if filter_category is not None:
+        query = query.join(database.Credential.categories).filter(
+            database.PasswordCategory.id == filter_category
+        )
+
+    # Apply sorting if specified
+    if sort_by == "date":
+        if sort_direction == "asc":
+            query = query.order_by(database.Credential.updated_at.asc())
+        else:
+            # Default to descending for date to maintain backward compatibility
+            query = query.order_by(database.Credential.updated_at.desc())
+    elif sort_by == "name":
+        if sort_direction == "desc":
+            query = query.order_by(database.Credential.title.desc())
+        else:
+            # Default to ascending for name to maintain backward compatibility
+            query = query.order_by(database.Credential.title.asc())
+
+    return query.offset(skip).limit(limit).all()
 
 
 def get_credential(db: Session, credential_id: int, user_id: int):

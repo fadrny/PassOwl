@@ -1,5 +1,6 @@
 <script lang="ts">
     import Button from '$lib/components/ui/Button.svelte';
+    import type { PasswordCategory } from '$lib/services/api';
 
     interface PasswordEntry {
         id: string;
@@ -19,14 +20,29 @@
 
     interface Props {
         passwords: PasswordEntry[];
+        categories?: PasswordCategory[];
         onDecrypt?: (id: string) => void;
         onEdit?: (id: string) => void;
         onShare?: (id: string) => void;
+        onSortChange?: (sortBy: string, direction: string) => void;
+        onCategoryFilter?: (categoryId: number | null) => void;
+        currentSort?: { by: string; direction: string };
+        currentCategoryFilter?: number | null;
     }
 
-    let { passwords = [], onDecrypt, onEdit, onShare }: Props = $props();
+    let { 
+        passwords = [], 
+        categories = [],
+        onDecrypt, 
+        onEdit, 
+        onShare,
+        onSortChange,
+        onCategoryFilter,
+        currentSort = { by: '', direction: 'asc' },
+        currentCategoryFilter = null
+    }: Props = $props();
 
-    // Stav pro sledování, které heslo je dešifrované - použití $derived
+    // Stav pro sledování, které heslo je dešifrované
     const decryptedPasswordIds = $derived(
         new Set(
             passwords
@@ -35,13 +51,23 @@
         )
     );
 
+    function handleSort(sortBy: string) {
+        const newDirection = currentSort.by === sortBy && currentSort.direction === 'asc' ? 'desc' : 'asc';
+        onSortChange?.(sortBy, newDirection);
+    }
+
+    function handleCategoryFilter(event: Event) {
+        const target = event.target as HTMLSelectElement;
+        const categoryId = target.value ? parseInt(target.value) : null;
+        onCategoryFilter?.(categoryId);
+    }
+
     function handleDecrypt(id: string) {
         onDecrypt?.(id);
     }
 
     function copyToClipboard(text: string) {
         navigator.clipboard.writeText(text).then(() => {
-            // Můžete přidat toast notifikaci
             console.log('Zkopírováno do schránky');
         }).catch(err => {
             console.error('Chyba při kopírování:', err);
@@ -52,9 +78,56 @@
         if (!dateString) return '';
         return new Date(dateString).toLocaleDateString('cs-CZ');
     }
+
+    function getSortIcon(column: string) {
+        if (currentSort.by !== column) {
+            return '↕'; // Neutrální ikona
+        }
+        return currentSort.direction === 'asc' ? '↑' : '↓';
+    }
 </script>
 
 <div class="bg-white shadow overflow-hidden sm:rounded-md">
+    <!-- Ovládací panel pro filtrování a řazení -->
+    <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+        <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <h3 class="text-lg font-medium text-gray-900">
+                Hesla ({passwords.length})
+            </h3>
+            
+            <div class="flex flex-col sm:flex-row gap-3">
+                <!-- Filtr podle kategorie -->
+                <div class="flex items-center gap-2">
+                    <label for="category-filter" class="text-sm font-medium text-gray-700">
+                        Kategorie:
+                    </label>
+                    <select 
+                        id="category-filter"
+                        class="block w-40 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        onchange={handleCategoryFilter}
+                        value={currentCategoryFilter || ''}
+                    >
+                        <option value="">Všechny kategorie</option>
+                        {#each categories as category}
+                            <option value={category.id}>{category.name}</option>
+                        {/each}
+                    </select>
+                </div>
+
+                <!-- Info o aktuálním řazení -->
+                {#if currentSort.by}
+                    <div class="flex items-center gap-2 text-sm text-gray-600">
+                        <span>Řazeno podle:</span>
+                        <span class="font-medium">
+                            {currentSort.by === 'title' ? 'Názvu' : 'Data vytvoření'}
+                            ({currentSort.direction === 'asc' ? 'vzestupně' : 'sestupně'})
+                        </span>
+                    </div>
+                {/if}
+            </div>
+        </div>
+    </div>
+
     {#if passwords.length === 0}
         <div class="text-center py-12">
             <svg
@@ -70,8 +143,12 @@
                     d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
                 />
             </svg>
-            <h3 class="mt-2 text-sm font-medium text-gray-900">Žádná hesla</h3>
-            <p class="mt-1 text-sm text-gray-500">Začněte přidáním prvního hesla.</p>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">
+                {currentCategoryFilter ? 'Žádná hesla v této kategorii' : 'Žádná hesla'}
+            </h3>
+            <p class="mt-1 text-sm text-gray-500">
+                {currentCategoryFilter ? 'Zkuste vybrat jinou kategorii nebo přidat nové heslo.' : 'Začněte přidáním prvního hesla.'}
+            </p>
         </div>
     {:else}
         <div class="overflow-x-auto">
@@ -80,9 +157,13 @@
                     <tr>
                         <th
                             scope="col"
-                            class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+                            class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 cursor-pointer hover:bg-gray-100"
+                            onclick={() => handleSort('title')}
                         >
-                            Název
+                            <div class="flex items-center gap-1">
+                                Název
+                                <span class="text-gray-400">{getSortIcon('title')}</span>
+                            </div>
                         </th>
                         <th
                             scope="col"
@@ -104,9 +185,13 @@
                         </th>
                         <th
                             scope="col"
-                            class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+                            class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 cursor-pointer hover:bg-gray-100"
+                            onclick={() => handleSort('created_at')}
                         >
-                            Vytvořeno
+                            <div class="flex items-center gap-1">
+                                Vytvořeno
+                                <span class="text-gray-400">{getSortIcon('created_at')}</span>
+                            </div>
                         </th>
                         <th scope="col" class="relative px-6 py-3">
                             <span class="sr-only">Akce</span>
@@ -134,7 +219,7 @@
                                                     stroke-linecap="round"
                                                     stroke-linejoin="round"
                                                     stroke-width="2"
-                                                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-2M7 7l10 10M17 7v4"
+                                                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-2M14 4h6m0 0v6m0-6L10 14"
                                                 />
                                             </svg>
                                         </a>
@@ -142,12 +227,12 @@
                                 </div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="flex items-center space-x-2">
+                                <div class="flex items-center">
                                     <span class="text-sm text-gray-900">{password.username}</span>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
+                                    <button
                                         onclick={() => copyToClipboard(password.username)}
+                                        class="ml-2 p-1 text-gray-400 hover:text-gray-600"
+                                        title="Kopírovat uživatelské jméno"
                                     >
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path
@@ -157,19 +242,19 @@
                                                 d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
                                             />
                                         </svg>
-                                    </Button>
+                                    </button>
                                 </div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="flex items-center space-x-2">
+                                <div class="flex items-center">
                                     {#if decryptedPasswordIds.has(password.id)}
-                                        <code class="text-sm font-mono bg-gray-100 px-2 py-1 rounded">
+                                        <span class="text-sm text-gray-900 font-mono mr-2">
                                             {password.decryptedPassword}
-                                        </code>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
+                                        </span>
+                                        <button
                                             onclick={() => copyToClipboard(password.decryptedPassword || '')}
+                                            class="p-1 text-gray-400 hover:text-gray-600 mr-2"
+                                            title="Kopírovat heslo"
                                         >
                                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path
@@ -179,90 +264,59 @@
                                                     d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
                                                 />
                                             </svg>
+                                        </button>
+                                        <Button
+                                            variant="secondary"
+                                            size="sm"
+                                            onclick={() => handleDecrypt(password.id)}
+                                        >
+                                            Skrýt
                                         </Button>
                                     {:else}
-                                        <span class="text-sm text-gray-500">••••••••</span>
+                                        <span class="text-sm text-gray-400 mr-2">••••••••</span>
+                                        <Button
+                                            variant="primary"
+                                            size="sm"
+                                            onclick={() => handleDecrypt(password.id)}
+                                        >
+                                            Zobrazit
+                                        </Button>
                                     {/if}
-                                    
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onclick={() => handleDecrypt(password.id)}
-                                    >
-                                        {#if decryptedPasswordIds.has(password.id)}
-                                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path
-                                                    stroke-linecap="round"
-                                                    stroke-linejoin="round"
-                                                    stroke-width="2"
-                                                    d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"
-                                                />
-                                            </svg>
-                                        {:else}
-                                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path
-                                                    stroke-linecap="round"
-                                                    stroke-linejoin="round"
-                                                    stroke-width="2"
-                                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                                />
-                                                <path
-                                                    stroke-linecap="round"
-                                                    stroke-linejoin="round"
-                                                    stroke-width="2"
-                                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                                                />
-                                            </svg>
-                                        {/if}
-                                    </Button>
                                 </div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 {#if password.category}
                                     <span
-                                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                                        style="background-color: {password.category.color}20; color: {password.category.color}"
+                                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium text-white"
+                                        style="background-color: {password.category.color}"
                                     >
                                         {password.category.name}
                                     </span>
                                 {:else}
-                                    <span class="text-sm text-gray-500">-</span>
+                                    <span class="text-sm text-gray-400">Bez kategorie</span>
                                 {/if}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 {formatDate(password.created_at)}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <div class="flex items-center space-x-2">
+                                <div class="flex items-center gap-2">
                                     <Button
-                                        variant="ghost"
+                                        variant="secondary"
                                         size="sm"
                                         onclick={() => onEdit?.(password.id)}
                                     >
-                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                stroke-width="2"
-                                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                            />
-                                        </svg>
+                                        Upravit
                                     </Button>
-
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onclick={() => onShare?.(password.id)}
-                                    >
-                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                stroke-width="2"
-                                                d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
-                                            />
-                                        </svg>
-                                    </Button>
+                                    {#if onShare}
+                                        <Button
+                                            variant="secondary"
+                                            size="sm"
+                                            onclick={() => onShare?.(password.id)}
+                                        >
+                                            Sdílet
+                                        </Button>
+                                    {/if}
                                 </div>
                             </td>
                         </tr>

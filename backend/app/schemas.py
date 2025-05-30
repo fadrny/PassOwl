@@ -71,6 +71,8 @@ class PasswordCategory(PasswordCategoryBase):
 
     id: int
     user_id: int
+    created_at: datetime
+    updated_at: datetime
 
 
 # Credential schemas (defined after PasswordCategory)

@@ -95,9 +95,15 @@ export class PasswordManager {
   }
 
   /**
-   * Získání seznamu hesel (podle API specifikace)
+   * Získání seznamu hesel s podporou filtrování a řazení
    */
-  static async getPasswords(params?: { skip?: number; limit?: number }): Promise<ApiResponse<Credential[]>> {
+  static async getPasswords(params?: { 
+    skip?: number; 
+    limit?: number;
+    sort_by?: string;
+    sort_direction?: string;
+    filter_category?: number | null;
+  }): Promise<ApiResponse<Credential[]>> {
     try {
       const response = await api.credentials.getCredentialsCredentialsGet(params || {});
       return { data: response.data };

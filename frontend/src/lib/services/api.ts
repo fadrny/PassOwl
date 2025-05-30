@@ -510,7 +510,7 @@ export class HttpClient<SecurityDataType = unknown> {
  * @title PassOwl API
  * @version 1.0.0
  *
- * E2E šifrové ukládání hesel
+ * Backend pro aplikaci PassOwl
  */
 export class Api<
   SecurityDataType extends unknown,
@@ -657,6 +657,12 @@ export class Api<
          * @default 100
          */
         limit?: number;
+        /** Sort By */
+        sort_by?: string;
+        /** Sort Direction */
+        sort_direction?: string;
+        /** Filter Category */
+        filter_category?: number | null;
       },
       params: RequestParams = {},
     ) =>

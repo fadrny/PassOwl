@@ -7,9 +7,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Create database tables
+Base.metadata.create_all(bind=engine)
+
 app = FastAPI(
     title="PassOwl API",
-    description="E2E šifrové ukládání hesel",
+    description="Backend pro aplikaci PassOwl",
     version="1.0.0"
 )
 
