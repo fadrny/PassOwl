@@ -1,16 +1,31 @@
 import { json } from '@sveltejs/kit';
 import { v2 as cloudinary } from 'cloudinary';
 import type { RequestHandler } from './$types';
-
-// Konfigurace Cloudinary
-cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET
-});
+import { SECRET_CLOUDINARY_CLOUD_NAME, SECRET_CLOUDINARY_API_KEY, SECRET_CLOUDINARY_API_SECRET } from '$env/static/private';
 
 export const POST: RequestHandler = async ({ request }) => {
     try {
+        // Kontrola environment variables
+        const cloudName = SECRET_CLOUDINARY_CLOUD_NAME;
+        const apiKey = SECRET_CLOUDINARY_API_KEY;
+        const apiSecret = SECRET_CLOUDINARY_API_SECRET;
+
+        if (!cloudName || !apiKey || !apiSecret) {
+            console.error('Missing Cloudinary credentials:', {
+                cloudName: !!cloudName,
+                apiKey: !!apiKey,
+                apiSecret: !!apiSecret
+            });
+            return json({ error: 'Chyba konfigurace serveru' }, { status: 500 });
+        }
+
+        // Konfigurace Cloudinary
+        cloudinary.config({
+            cloud_name: cloudName,
+            api_key: apiKey,
+            api_secret: apiSecret
+        });
+
         const formData = await request.formData();
         const file = formData.get('avatar') as File;
         
@@ -32,6 +47,8 @@ export const POST: RequestHandler = async ({ request }) => {
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
 
+        console.log('Uploading to Cloudinary...');
+
         // Nahrání do Cloudinary s transformacemi
         const result = await new Promise((resolve, reject) => {
             cloudinary.uploader.upload_stream(
@@ -45,8 +62,13 @@ export const POST: RequestHandler = async ({ request }) => {
                     public_id: `avatar_${Date.now()}`
                 },
                 (error, result) => {
-                    if (error) reject(error);
-                    else resolve(result);
+                    if (error) {
+                        console.error('Cloudinary upload error:', error);
+                        reject(error);
+                    } else {
+                        console.log('Cloudinary upload success:', result?.secure_url);
+                        resolve(result);
+                    }
                 }
             ).end(buffer);
         });
