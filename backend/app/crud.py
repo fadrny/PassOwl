@@ -4,7 +4,6 @@ from . import database, schemas
 from typing import List, Optional
 import json
 
-
 # User CRUD
 def get_user(db: Session, user_id: int):
     return db.query(database.User).filter(database.User.id == user_id).first()
@@ -75,13 +74,13 @@ def get_credentials(db: Session, user_id: int, skip: int = 0, limit: int = 100, 
         )
 
     # Apply sorting if specified
-    if sort_by == "date":
+    if sort_by == "created_at":
         if sort_direction == "asc":
             query = query.order_by(database.Credential.updated_at.asc())
         else:
             # Default to descending for date to maintain backward compatibility
             query = query.order_by(database.Credential.updated_at.desc())
-    elif sort_by == "name":
+    elif sort_by == "title":
         if sort_direction == "desc":
             query = query.order_by(database.Credential.title.desc())
         else:

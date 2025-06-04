@@ -115,6 +115,16 @@ export interface PasswordCategory {
   id: number;
   /** User Id */
   user_id: number;
+  /**
+   * Created At
+   * @format date-time
+   */
+  created_at: string;
+  /**
+   * Updated At
+   * @format date-time
+   */
+  updated_at: string;
 }
 
 /** PasswordCategoryCreate */
