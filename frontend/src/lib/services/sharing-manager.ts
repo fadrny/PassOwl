@@ -4,12 +4,10 @@ import {
     decryptWithPrivateKey, 
     encryptData, 
     decryptData, 
-    generateSharingKey,
-    decryptPrivateKey
+    generateSharingKey
 } from './crypto';
 import { PasswordManager } from './password-manager';
 import { encryptionKeyManager } from './encryption-key-manager';
-import { AuthStore } from '$lib/stores/auth';
 import type { 
     SharedCredentialCreate, 
     SharedCredentialResponse, 
@@ -36,6 +34,18 @@ export interface DecryptedSharedPassword {
 }
 
 export class SharingManager {
+    /**
+     * Kontrola dostupnosti privátního klíče
+     */
+    private static ensurePrivateKeyAvailable(): string {
+        const privateKey = encryptionKeyManager.getPrivateKey();
+        if (!privateKey) {
+            throw new Error('Privátní klíč není dostupný. Zadejte prosím master heslo.');
+        }
+        encryptionKeyManager.refreshKeyLifetime();
+        return privateKey;
+    }
+
     /**
      * Sdílení hesla s jiným uživatelem
      */
@@ -113,35 +123,19 @@ export class SharingManager {
     }
 
     /**
-     * Dešifrování sdíleného hesla
+     * Dešifrování sdíleného hesla - ZJEDNODUŠENÉ BEZ MASTER HESLA
      */
     static async decryptSharedPassword(
-        sharedCredential: SharedCredentialResponse, 
-        masterPassword: string
+        sharedCredential: SharedCredentialResponse
     ): Promise<ApiResponse<DecryptedSharedPassword>> {
         try {
-            // 1. Získat encryption salt aktuálního uživatele
-            const encryptionSalt = AuthStore.getEncryptionSalt();
-            if (!encryptionSalt) {
-                return { error: { detail: 'Encryption salt nenalezen', status: 500 } };
-            }
+            // 1. Získat privátní klíč z paměti (už je dešifrovaný)
+            const privateKey = this.ensurePrivateKeyAvailable();
 
-            // 2. Získat zašifrovaný privátní klíč aktuálního uživatele
-            const userResponse = await api.users.getCurrentUserInfoUsersMeGet();
-            const currentUser = userResponse.data;
-            
-            if (!currentUser.encrypted_private_key) {
-                return { error: { detail: 'Privátní klíč nenalezen', status: 500 } };
-            }
-
-            // 3. Dešifrovat privátní klíč pomocí master hesla
-            const [encryptedPrivateKey, iv] = currentUser.encrypted_private_key.split(':');
-            const privateKey = await decryptPrivateKey(encryptedPrivateKey, iv, masterPassword, encryptionSalt);
-
-            // 4. Dešifrovat sharing_key pomocí privátního klíče
+            // 2. Dešifrovat sharing_key pomocí privátního klíče
             const sharingKey = await decryptWithPrivateKey(sharedCredential.encrypted_sharing_key, privateKey);
 
-            // 5. Dešifrovat data hesla pomocí sharing_key
+            // 3. Dešifrovat data hesla pomocí sharing_key
             const decryptedDataString = await decryptData(
                 sharedCredential.encrypted_shared_data, 
                 sharedCredential.sharing_iv, 
@@ -211,5 +205,12 @@ export class SharingManager {
                 }
             };
         }
+    }
+
+    /**
+     * Kontrola dostupnosti privátního klíče
+     */
+    static isPrivateKeyAvailable(): boolean {
+        return encryptionKeyManager.isPrivateKeyAvailable();
     }
 }

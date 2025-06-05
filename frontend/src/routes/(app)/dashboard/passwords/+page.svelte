@@ -10,7 +10,6 @@
     import AddPasswordModal from '$lib/components/modals/AddPasswordModal.svelte';
     import EditPasswordModal from '$lib/components/modals/EditPasswordModal.svelte';
     import SharePasswordModal from '$lib/components/modals/SharePasswordModal.svelte';
-    import MasterPasswordModal from '$lib/components/modals/MasterPasswordModal.svelte';
     import { SharingManager } from '$lib/services/sharing-manager';
     import type { SharedCredentialResponse, DecryptedSharedPassword } from '$lib/services/sharing-manager';
 
@@ -32,10 +31,8 @@
     let sharedPasswords: SharedCredentialResponse[] = $state([]);
     let decryptedSharedPasswords = $state(new Map<number, DecryptedSharedPassword>());
     let showShareModal = $state(false);
-    let showMasterPasswordModal = $state(false);
     let sharePasswordId = $state(0);
     let sharePasswordTitle = $state('');
-    let pendingDecryptId = $state(0);
 
     // Načtení hesel při načtení komponenty
     onMount(async () => {
@@ -158,6 +155,36 @@
         }
     }
 
+    // ZJEDNODUŠENÁ FUNKCE PRO SDÍLENÁ HESLA
+    async function handleDecryptShared(sharedId: number) {
+        const sharedCredential = sharedPasswords.find(sp => sp.id === sharedId);
+        if (!sharedCredential) return;
+
+        // Pokud je už dešifrováno, skryj ho
+        if (decryptedSharedPasswords.has(sharedId)) {
+            decryptedSharedPasswords.delete(sharedId);
+            decryptedSharedPasswords = new Map(decryptedSharedPasswords);
+            return;
+        }
+
+        try {
+            const result = await SharingManager.decryptSharedPassword(sharedCredential);
+            
+            if (result.error) {
+                alert(`Chyba při dešifrování: ${result.error.detail}`);
+                return;
+            }
+
+            if (result.data) {
+                decryptedSharedPasswords.set(sharedId, result.data);
+                decryptedSharedPasswords = new Map(decryptedSharedPasswords);
+            }
+        } catch (err) {
+            console.error('Error decrypting shared password:', err);
+            alert('Nepodařilo se dešifrovat sdílené heslo');
+        }
+    }
+
     function handleSortChange(sortBy: string, direction: string) {
         currentSort = { by: sortBy, direction };
         loadPasswords();
@@ -215,32 +242,6 @@
     function handlePasswordShared() {
         showShareModal = false;
         loadSharedPasswords(); // Načíst znovu sdílená hesla
-    }
-
-    function handleDecryptShared(sharedId: number) {
-        pendingDecryptId = sharedId;
-        showMasterPasswordModal = true;
-    }
-
-    async function handleMasterPasswordConfirm(masterPassword: string) {
-        try {
-            const sharedCredential = sharedPasswords.find(sp => sp.id === pendingDecryptId);
-            if (!sharedCredential) {
-                throw new Error('Sdílené heslo nenalezeno');
-            }
-
-            const result = await SharingManager.decryptSharedPassword(sharedCredential, masterPassword);
-            if (result.error) {
-                throw new Error(result.error.detail);
-            }
-
-            if (result.data) {
-                decryptedSharedPasswords.set(pendingDecryptId, result.data);
-                decryptedSharedPasswords = new Map(decryptedSharedPasswords);
-            }
-        } catch (error: any) {
-            throw error; // Propagate error to modal
-        }
     }
 </script>
 
@@ -306,13 +307,5 @@
     passwordId={sharePasswordId}
     passwordTitle={sharePasswordTitle}
     onShared={handlePasswordShared}
-/>
-
-<MasterPasswordModal
-    open={showMasterPasswordModal}
-    title="Dešifrování sdíleného hesla"
-    description="Pro dešifrování sdíleného hesla zadejte své master heslo."
-    onConfirm={handleMasterPasswordConfirm}
-    onClose={() => showMasterPasswordModal = false}
 />
 
