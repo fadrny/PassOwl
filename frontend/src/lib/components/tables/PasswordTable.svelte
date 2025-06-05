@@ -233,6 +233,7 @@
                                         onclick={() => copyToClipboard(password.username)}
                                         class="ml-2 p-1 text-gray-400 hover:text-gray-600"
                                         title="Kopírovat uživatelské jméno"
+                                        aria-label="Kopírovat uživatelské jméno"
                                     >
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path
@@ -255,6 +256,7 @@
                                             onclick={() => copyToClipboard(password.decryptedPassword || '')}
                                             class="p-1 text-gray-400 hover:text-gray-600 mr-2"
                                             title="Kopírovat heslo"
+                                            aria-label="Kopírovat heslo"
                                         >
                                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path
