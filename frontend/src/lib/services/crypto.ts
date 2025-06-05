@@ -89,12 +89,21 @@ async function importKeyFromBase64(keyBase64: string): Promise<CryptoKey> {
 /**
  * Šifruje data pomocí AES-GCM
  */
-export async function encryptData(plaintext: string, keyBase64: string): Promise<{ encryptedData: string; iv: string }> {
+export async function encryptData(plaintext: string, keyBase64: string, customIv?: string): Promise<{ encryptedData: string; iv: string }> {
     const key = await importKeyFromBase64(keyBase64);
     const encoder = new TextEncoder();
     const data = encoder.encode(plaintext);
     
-    const iv = crypto.getRandomValues(new Uint8Array(12));
+    let iv: Uint8Array;
+    let ivBase64: string;
+    
+    if (customIv) {
+        iv = Uint8Array.from(atob(customIv), c => c.charCodeAt(0));
+        ivBase64 = customIv;
+    } else {
+        iv = crypto.getRandomValues(new Uint8Array(12));
+        ivBase64 = btoa(String.fromCharCode(...iv));
+    }
     
     const encryptedBuffer = await crypto.subtle.encrypt(
         { name: 'AES-GCM', iv: iv },
@@ -103,7 +112,6 @@ export async function encryptData(plaintext: string, keyBase64: string): Promise
     );
     
     const encryptedData = btoa(String.fromCharCode(...new Uint8Array(encryptedBuffer)));
-    const ivBase64 = btoa(String.fromCharCode(...iv));
     
     return { encryptedData, iv: ivBase64 };
 }
@@ -127,7 +135,7 @@ export async function decryptData(encryptedData: string, ivBase64: string, keyBa
     return decoder.decode(decryptedBuffer);
 }
 
-// ===== NOVÉ FUNKCE PRO ASYMETRICKÉ ŠIFROVÁNÍ =====
+// ===== FUNKCE PRO ASYMETRICKÉ ŠIFROVÁNÍ =====
 
 /**
  * Generuje pár RSA klíčů pro asymetrické šifrování
