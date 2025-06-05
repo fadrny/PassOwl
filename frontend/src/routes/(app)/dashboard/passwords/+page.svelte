@@ -23,22 +23,36 @@
     let editingPasswordId: number | undefined = $state(undefined);
     let editingPasswordData: PasswordUpdateData | undefined = $state(undefined);
 
+    // Pagination stavy pro vlastní hesla
+    let currentPage = $state(1);
+    let totalPages = $state(1);
+    let totalCount = $state(0);
+    const pageSize = 10;
+
     // Nové stavy pro filtrování a řazení
     let currentSort = $state({ by: '', direction: 'asc' });
     let currentCategoryFilter: number | null = $state(null);
 
-    // Nový stav pro sdílení
+    // Stav pro sdílení
     let sharedPasswords: SharedCredentialResponse[] = $state([]);
     let decryptedSharedPasswords = $state(new Map<number, DecryptedSharedPassword>());
     let showShareModal = $state(false);
     let sharePasswordId = $state(0);
     let sharePasswordTitle = $state('');
 
-    // Načtení hesel při načtení komponenty
+    // Pagination stavy pro sdílená hesla
+    let sharedCurrentPage = $state(1);
+    let sharedTotalPages = $state(1);
+    let sharedTotalCount = $state(0);
+    let sharedLoading = $state(false);
+
+    // Načtení dat při načtení komponenty
     onMount(async () => {
-        await loadPasswords();
-        await loadCategories();
-        await loadSharedPasswords();
+        await Promise.all([
+            loadPasswords(),
+            loadCategories(),
+            loadSharedPasswords()
+        ]);
     });
 
     async function loadCategories() {
@@ -55,9 +69,13 @@
     async function loadPasswords() {
         loading = true;
         error = null;
-
+        
         try {
-            const params: any = { limit: 100 };
+            const skip = (currentPage - 1) * pageSize;
+            const params: any = { 
+                skip, 
+                limit: pageSize 
+            };
             
             // Přidání parametrů řazení
             if (currentSort.by) {
@@ -77,7 +95,11 @@
                 return;
             }
 
-            passwords = result.data || [];
+            // Nyní result.data obsahuje items a total
+            passwords = result.data?.items || [];
+            totalCount = result.data?.total || 0;
+            totalPages = Math.ceil(totalCount / pageSize);
+            
             // Vyčistit dešifrovaná hesla při novém načtení
             decryptedPasswords.clear();
             decryptedPasswords = new Map(decryptedPasswords);
@@ -90,15 +112,29 @@
     }
 
     async function loadSharedPasswords() {
+        sharedLoading = true;
         try {
-            const result = await SharingManager.getSharedPasswords();
+            const skip = (sharedCurrentPage - 1) * pageSize;
+            const result = await SharingManager.getSharedPasswords({ skip, limit: pageSize });
+            
             if (result.error) {
                 console.error('Error loading shared passwords:', result.error);
                 return;
             }
-            sharedPasswords = result.data || [];
+            
+            // Nyní result.data obsahuje items a total
+            sharedPasswords = result.data?.items || [];
+            sharedTotalCount = result.data?.total || 0;
+            sharedTotalPages = Math.ceil(sharedTotalCount / pageSize);
+            
+            // Vyčistit dešifrovaná sdílená hesla při novém načtení
+            decryptedSharedPasswords.clear();
+            decryptedSharedPasswords = new Map(decryptedSharedPasswords);
+            
         } catch (err) {
             console.error('Error loading shared passwords:', err);
+        } finally {
+            sharedLoading = false;
         }
     }
 
@@ -187,12 +223,24 @@
 
     function handleSortChange(sortBy: string, direction: string) {
         currentSort = { by: sortBy, direction };
+        currentPage = 1; // Reset na první stránku při změně řazení
         loadPasswords();
     }
 
     function handleCategoryFilter(categoryId: number | null) {
         currentCategoryFilter = categoryId;
+        currentPage = 1; // Reset na první stránku při změně filtru
         loadPasswords();
+    }
+
+    function handlePageChange(page: number) {
+        currentPage = page;
+        loadPasswords();
+    }
+
+    function handleSharedPageChange(page: number) {
+        sharedCurrentPage = page;
+        loadSharedPasswords();
     }
 
     function handleEdit(id: string) {
@@ -266,11 +314,15 @@
         passwords={transformedPasswords}
         categories={categories}
         loading={loading}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalCount={totalCount}
         onDecrypt={handleDecrypt}
         onEdit={handleEdit}
         onShare={handleShare}
         onSortChange={handleSortChange}
         onCategoryFilter={handleCategoryFilter}
+        onPageChange={handlePageChange}
         currentSort={currentSort}
         currentCategoryFilter={currentCategoryFilter}
     />
@@ -279,7 +331,12 @@
     <SharedPasswordTable
         sharedPasswords={sharedPasswords}
         decryptedSharedPasswords={decryptedSharedPasswords}
+        currentPage={sharedCurrentPage}
+        totalPages={sharedTotalPages}
+        totalCount={sharedTotalCount}
+        loading={sharedLoading}
         onDecrypt={handleDecryptShared}
+        onPageChange={handleSharedPageChange}
     />
 </div>
 
@@ -308,4 +365,3 @@
     passwordTitle={sharePasswordTitle}
     onShared={handlePasswordShared}
 />
-

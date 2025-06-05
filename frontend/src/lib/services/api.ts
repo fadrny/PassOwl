@@ -83,6 +83,14 @@ export interface CredentialCreate {
   category_ids?: number[];
 }
 
+/** CredentialListResponse */
+export interface CredentialListResponse {
+  /** Items */
+  items: Credential[];
+  /** Total */
+  total: number;
+}
+
 /** CredentialUpdate */
 export interface CredentialUpdate {
   /** Title */
@@ -185,6 +193,14 @@ export interface SecureNoteCreate {
   encryption_iv: string;
 }
 
+/** SecureNoteListResponse */
+export interface SecureNoteListResponse {
+  /** Items */
+  items: SecureNote[];
+  /** Total */
+  total: number;
+}
+
 /** SecureNoteUpdate */
 export interface SecureNoteUpdate {
   /** Encrypted Title */
@@ -207,6 +223,14 @@ export interface SharedCredentialCreate {
   encrypted_shared_data: string;
   /** Sharing Iv */
   sharing_iv: string;
+}
+
+/** SharedCredentialListResponse */
+export interface SharedCredentialListResponse {
+  /** Items */
+  items: SharedCredentialResponse[];
+  /** Total */
+  total: number;
 }
 
 /** SharedCredentialResponse */
@@ -791,7 +815,7 @@ export class Api<
       },
       params: RequestParams = {},
     ) =>
-      this.request<Credential[], HTTPValidationError>({
+      this.request<CredentialListResponse, HTTPValidationError>({
         path: `/credentials/`,
         method: "GET",
         query: query,
@@ -914,7 +938,7 @@ export class Api<
       },
       params: RequestParams = {},
     ) =>
-      this.request<SecureNote[], HTTPValidationError>({
+      this.request<SecureNoteListResponse, HTTPValidationError>({
         path: `/secure-notes/`,
         method: "GET",
         query: query,
@@ -1223,11 +1247,24 @@ export class Api<
      * @secure
      */
     getReceivedSharedCredentialsApiSharingReceivedGet: (
+      query?: {
+        /**
+         * Skip
+         * @default 0
+         */
+        skip?: number;
+        /**
+         * Limit
+         * @default 100
+         */
+        limit?: number;
+      },
       params: RequestParams = {},
     ) =>
-      this.request<SharedCredentialResponse[], any>({
+      this.request<SharedCredentialListResponse, HTTPValidationError>({
         path: `/api/sharing/received`,
         method: "GET",
+        query: query,
         secure: true,
         format: "json",
         ...params,

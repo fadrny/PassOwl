@@ -89,7 +89,13 @@ def get_credentials(db: Session, user_id: int, skip: int = 0, limit: int = 100, 
             # Default to ascending for name to maintain backward compatibility
             query = query.order_by(database.Credential.title.asc())
 
-    return query.offset(skip).limit(limit).all()
+    # Get total count
+    total = query.count()
+
+    # Get paginated items
+    items = query.offset(skip).limit(limit).all()
+
+    return {"items": items, "total": total}
 
 
 def get_credential(db: Session, credential_id: int, user_id: int):
@@ -172,9 +178,17 @@ def delete_credential(db: Session, credential_id: int, user_id: int):
 
 # SecureNote CRUD
 def get_secure_notes(db: Session, user_id: int, skip: int = 0, limit: int = 100):
-    return db.query(database.SecureNote).filter(
+    query = db.query(database.SecureNote).filter(
         database.SecureNote.user_id == user_id
-    ).offset(skip).limit(limit).all()
+    )
+
+    # Get total count
+    total = query.count()
+
+    # Get paginated items
+    items = query.offset(skip).limit(limit).all()
+
+    return {"items": items, "total": total}
 
 
 def get_secure_note(db: Session, note_id: int, user_id: int):
@@ -347,13 +361,21 @@ def create_shared_credential(db: Session, shared_credential: schemas.SharedCrede
     return db_shared
 
 def get_shared_credentials_received(db: Session, user_id: int, skip: int = 0, limit: int = 100):
-    return db.query(database.SharedCredential).join(
+    query = db.query(database.SharedCredential).join(
         database.Credential, database.SharedCredential.credential_id == database.Credential.id
     ).join(
         database.User, database.SharedCredential.owner_user_id == database.User.id
     ).filter(
         database.SharedCredential.recipient_user_id == user_id
-    ).offset(skip).limit(limit).all()
+    )
+
+    # Get total count
+    total = query.count()
+
+    # Get paginated items
+    items = query.offset(skip).limit(limit).all()
+
+    return {"items": items, "total": total}
 
 def get_shared_credentials_owned(db: Session, user_id: int):
     return db.query(database.SharedCredential).join(

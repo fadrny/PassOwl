@@ -225,3 +225,19 @@ class SharedUserResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# Pagination response schemas with total count
+class CredentialListResponse(BaseModel):
+    items: List[Credential]
+    total: int
+
+
+class SharedCredentialListResponse(BaseModel):
+    items: List[SharedCredentialResponse]
+    total: int
+
+
+class SecureNoteListResponse(BaseModel):
+    items: List[SecureNote]
+    total: int

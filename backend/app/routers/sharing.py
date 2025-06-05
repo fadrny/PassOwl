@@ -59,7 +59,7 @@ def share_credential(
 
     return response_data
 
-@router.get("/received", response_model=List[schemas.SharedCredentialResponse])
+@router.get("/received", response_model=schemas.SharedCredentialListResponse)
 def get_received_shared_credentials(
     skip: int = 0,
     limit: int = 100,
@@ -67,10 +67,10 @@ def get_received_shared_credentials(
     current_user: schemas.User = Depends(auth.get_current_user)
 ):
     """Získání hesel sdílených s aktuálním uživatelem"""
-    shared_credentials = crud.get_shared_credentials_received(db, current_user.id, skip=skip, limit=limit)
+    result = crud.get_shared_credentials_received(db, current_user.id, skip=skip, limit=limit)
 
     response_list = []
-    for shared in shared_credentials:
+    for shared in result["items"]:
         credential = crud.get_credential(db, shared.credential_id, shared.owner_user_id)
         owner = crud.get_user(db, shared.owner_user_id)
 
@@ -87,7 +87,7 @@ def get_received_shared_credentials(
             owner_username=owner.username if owner else ""
         ))
 
-    return response_list
+    return schemas.SharedCredentialListResponse(items=response_list, total=result["total"])
 
 @router.get("/owned", response_model=List[schemas.SharedCredentialResponse])
 def get_owned_shared_credentials(

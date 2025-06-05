@@ -6,7 +6,7 @@ from .. import crud, schemas, database, auth
 router = APIRouter(prefix="/credentials", tags=["credentials"])
 
 
-@router.get("/", response_model=List[schemas.Credential])
+@router.get("/", response_model=schemas.CredentialListResponse)
 def get_credentials(
     skip: int = 0,
     limit: int = 100,
@@ -16,8 +16,8 @@ def get_credentials(
     current_user: database.User = Depends(auth.get_current_user),
     db: Session = Depends(database.get_db)
 ):
-    credentials = crud.get_credentials(db, user_id=current_user.id, skip=skip, limit=limit, sort_by=sort_by, sort_direction=sort_direction, filter_category=filter_category)
-    return credentials
+    result = crud.get_credentials(db, user_id=current_user.id, skip=skip, limit=limit, sort_by=sort_by, sort_direction=sort_direction, filter_category=filter_category)
+    return schemas.CredentialListResponse(items=result["items"], total=result["total"])
 
 
 @router.get("/{credential_id}", response_model=schemas.Credential)

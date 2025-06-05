@@ -143,10 +143,14 @@ export class SharingManager {
     /**
      * Získání sdílených hesel (přijatých)
      */
-    static async getSharedPasswords(): Promise<ApiResponse<SharedCredentialResponse[]>> {
+    static async getSharedPasswords(params?: { 
+        skip?: number; 
+        limit?: number;
+    }): Promise<ApiResponse<{ items: SharedCredentialResponse[]; total: number }>> {
         try {
-            const response = await api.api.getReceivedSharedCredentialsApiSharingReceivedGet();
-            return { data: response.data };
+            const response = await api.api.getReceivedSharedCredentialsApiSharingReceivedGet(params);
+            // Nyní response.data je SharedCredentialListResponse s items a total
+            return { data: { items: response.data.items, total: response.data.total } };
         } catch (error: any) {
             return {
                 error: {
