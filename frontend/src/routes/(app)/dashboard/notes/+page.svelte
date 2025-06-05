@@ -11,57 +11,126 @@
 
     // Typ pro display item
     type DisplayItem = {
-        type: 'note' | 'skeleton';
+        type: 'note' | 'skeleton' | 'loading';
         note?: DecryptedNote;
-        id: number;
+        id: number | string;
         variant?: 'short' | 'medium' | 'long';
     };
 
     let notes: SecureNote[] = $state([]);
     let decryptedNotes = $state(new Map<number, DecryptedNote>());
     let decryptingNotes = $state(new Set<number>());
-    let initialLoading = $state(false); // Jen pro první načtení
+    let initialLoading = $state(false);
+    let loadingMore = $state(false);
     let error: string | null = $state(null);
     let showAddModal = $state(false);
     let showEditModal = $state(false);
     let editingNote: DecryptedNote | undefined = $state(undefined);
 
+    // Infinite scroll stavy
+    let currentPage = $state(0);
+    let totalCount = $state(0);
+    let hasMorePages = $state(true);
+    const pageSize = 12;
+    let intersectionObserver: IntersectionObserver | null = null;
+    let loadMoreTrigger = $state<HTMLElement>();
+
     onMount(() => {
-        loadNotes();
+        loadFirstPage();
+        setupInfiniteScroll();
+        
+        return () => {
+            if (intersectionObserver) {
+                intersectionObserver.disconnect();
+            }
+        };
     });
 
-    async function loadNotes() {
+    function setupInfiniteScroll() {
+        intersectionObserver = new IntersectionObserver(
+            (entries) => {
+                const entry = entries[0];
+                if (entry.isIntersecting && hasMorePages && !loadingMore && !initialLoading) {
+                    loadMoreNotes();
+                }
+            },
+            {
+                rootMargin: '100px' // Načte další stránku 100px před koncem
+            }
+        );
+    }
+
+    // Přidání observe po vytvoření triggeru
+    $effect(() => {
+        if (loadMoreTrigger && intersectionObserver) {
+            intersectionObserver.observe(loadMoreTrigger);
+        }
+    });
+
+    async function loadFirstPage() {
         initialLoading = true;
         error = null;
+        notes = [];
         decryptedNotes.clear();
         decryptingNotes.clear();
+        currentPage = 0;
+        hasMorePages = true;
 
+        await loadNotesPage(0);
+        initialLoading = false;
+    }
+
+    async function loadMoreNotes() {
+        if (!hasMorePages || loadingMore) return;
+        
+        loadingMore = true;
+        const nextPage = currentPage + 1;
+        await loadNotesPage(nextPage);
+        loadingMore = false;
+    }
+
+    async function loadNotesPage(page: number) {
         try {
-            const result = await NotesManager.getNotes({ limit: 100 });
+            const skip = page * pageSize;
+            const result = await NotesManager.getNotes({ skip, limit: pageSize });
 
             if (result.error) {
-                error = result.error.detail;
+                if (page === 0) {
+                    error = result.error.detail;
+                }
                 return;
             }
 
-            notes = result.data || [];
+            const newNotes = result.data?.items || [];
+            totalCount = result.data?.total || 0;
             
-            initialLoading = false;
+            // Aktualizace stavu
+            if (page === 0) {
+                notes = newNotes;
+            } else {
+                notes = [...notes, ...newNotes];
+            }
             
+            currentPage = page;
+            hasMorePages = notes.length < totalCount;
+
+            // Dešifrování nových poznámek
             if (NotesManager.isEncryptionKeyAvailable()) {
-                decryptNotesProgressively();
+                decryptNewNotes(newNotes);
             } else {
                 console.warn('Encryption key not available');
             }
+
         } catch (err) {
-            console.error('Error loading notes:', err);
-            error = 'Nepodařilo se načíst poznámky';
-            initialLoading = false;
+            console.error('Error loading notes page:', err);
+            if (page === 0) {
+                error = 'Nepodařilo se načíst poznámky';
+            }
         }
     }
 
-    async function decryptNotesProgressively() {
-        for (const note of notes) {
+    async function decryptNewNotes(newNotes: SecureNote[]) {
+        for (const note of newNotes) {
             // Označíme poznámku jako "dešifruje se"
             decryptingNotes.add(note.id);
             decryptingNotes = new Set(decryptingNotes);
@@ -85,7 +154,7 @@
             decryptingNotes = new Set(decryptingNotes);
             
             // Kratší pauza pro plynulé zobrazování
-            await new Promise(resolve => setTimeout(resolve, 250));
+            await new Promise(resolve => setTimeout(resolve, 150));
         }
     }
 
@@ -95,31 +164,31 @@
     }
 
     function handleNoteAdded() {
-        loadNotes();
+        loadFirstPage(); // Znovu načíst od začátku
         showAddModal = false;
     }
 
     function handleNoteUpdated() {
-        loadNotes();
+        loadFirstPage(); // Znovu načíst od začátku
         showEditModal = false;
     }
 
     function handleNoteDeleted() {
-        loadNotes();
+        loadFirstPage(); // Znovu načíst od začátku
         showEditModal = false;
     }
 
     // Generujeme fixní varianty pro konzistentní zobrazení
     function getSkeletonVariant(noteId: number): 'short' | 'medium' | 'long' {
-        // Použijeme ID pro konzistentní variantu
         const variants: ('short' | 'medium' | 'long')[] = ['short', 'medium', 'long'];
         return variants[noteId % 3];
     }
 
     // Renderovaná data pro zobrazení (kombinace dešifrovaných a loading)
-    const displayItems = $derived(() => {
+    const displayItems = $derived.by(() => {
         const items: DisplayItem[] = [];
         
+        // Přidáme existující poznámky
         for (const note of notes) {
             if (decryptedNotes.has(note.id)) {
                 // Dešifrovaná poznámka
@@ -129,7 +198,7 @@
                     id: note.id
                 });
             } else {
-                // Ještě nedešifrovaná - skeleton (ať už se dešifruje nebo ne)
+                // Ještě nedešifrovaná - skeleton
                 items.push({
                     type: 'skeleton',
                     id: note.id,
@@ -137,8 +206,28 @@
                 });
             }
         }
+
+        // Přidáme loading skeletony při načítání další stránky
+        if (loadingMore && hasMorePages) {
+            const loadingCount = Math.min(pageSize, totalCount - notes.length);
+            for (let i = 0; i < loadingCount; i++) {
+                items.push({
+                    type: 'loading',
+                    id: `loading-${i}`,
+                    variant: getSkeletonVariant(notes.length + i)
+                });
+            }
+        }
         
         return items;
+    });
+
+    const statsText = $derived.by(() => {
+        if (totalCount === 0) return '';
+        if (notes.length >= totalCount) {
+            return `Zobrazeno všech ${totalCount} poznámek`;
+        }
+        return `Zobrazeno ${notes.length} z ${totalCount} poznámek`;
     });
 </script>
 
@@ -153,14 +242,6 @@
         buttonText="Přidat Poznámku"
         onButtonClick={() => showAddModal = true}
     />
-
-    <!-- Debug info -->
-    {#if import.meta.env.DEV}
-        <div class="bg-gray-100 p-2 text-xs">
-            Debug: notes={notes.length}, decrypted={decryptedNotes.size}, decrypting={decryptingNotes.size}, 
-            keyAvailable={NotesManager.isEncryptionKeyAvailable()}, displayItems={displayItems.length}
-        </div>
-    {/if}
 
     <!-- Content -->
     {#if initialLoading}
@@ -177,10 +258,19 @@
                 <div class="ml-3">
                     <h3 class="text-sm font-medium text-red-800">Chyba při načítání</h3>
                     <p class="mt-1 text-sm text-red-700">{error}</p>
+                    <div class="mt-2">
+                        <Button 
+                            variant="secondary" 
+                            size="sm"
+                            onclick={loadFirstPage}
+                        >
+                            Zkusit znovu
+                        </Button>
+                    </div>
                 </div>
             </div>
         </div>
-    {:else if notes.length === 0}
+    {:else if totalCount === 0}
         <div class="text-center py-12">
             <svg
                 class="mx-auto h-12 w-12 text-gray-400"
@@ -196,16 +286,48 @@
     {:else}
         <!-- Masonry grid s poznámkami a loading placeholdery -->
         <div class="columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4">
-            {#each displayItems() as item (item.id)}
+            {#each displayItems as item (item.id)}
                 {#if item.type === 'note' && item.note}
                     <div class="animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <NoteCard note={item.note} onEdit={handleEdit} />
                     </div>
-                {:else if item.type === 'skeleton'}
-                    <NoteCardSkeleton variant={item.variant} />
+                {:else if item.type === 'skeleton' || item.type === 'loading'}
+                    <NoteCardSkeleton 
+                        variant={item.variant} 
+                        pulse={item.type === 'loading'}
+                    />
                 {/if}
             {/each}
         </div>
+
+        <!-- Infinite scroll trigger -->
+        {#if hasMorePages}
+            <div 
+                bind:this={loadMoreTrigger}
+                class="flex justify-center py-8"
+            >
+                {#if loadingMore}
+                    <div class="flex items-center text-gray-600">
+                        <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                        <span class="ml-2">Načítám další poznámky...</span>
+                    </div>
+                {:else}
+                    <Button
+                        variant="secondary"
+                        onclick={loadMoreNotes}
+                    >
+                        Načíst další poznámky
+                    </Button>
+                {/if}
+            </div>
+        {:else if notes.length > 0}
+            <div class="text-center py-8 text-gray-500 text-sm">
+                <svg class="mx-auto h-8 w-8 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                Všechny poznámky načteny
+            </div>
+        {/if}
     {/if}
 </div>
 

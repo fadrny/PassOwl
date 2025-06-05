@@ -44,12 +44,16 @@ class User(Base):
     avatar_url = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    public_key = Column(Text)
+    encrypted_private_key = Column(Text)
 
     # Relationships
     roles = relationship("Role", secondary=user_roles, back_populates="users")
     credentials = relationship("Credential", back_populates="owner", cascade="all, delete-orphan")
     secure_notes = relationship("SecureNote", back_populates="owner", cascade="all, delete-orphan")
     categories = relationship("PasswordCategory", back_populates="owner", cascade="all, delete-orphan")
+    shared_credentials_owned = relationship("SharedCredential", foreign_keys="SharedCredential.owner_user_id", back_populates="owner")
+    shared_credentials_received = relationship("SharedCredential", foreign_keys="SharedCredential.recipient_user_id", back_populates="recipient")
 
 
 class Role(Base):
@@ -78,6 +82,7 @@ class Credential(Base):
     # Relationships
     owner = relationship("User", back_populates="credentials")
     categories = relationship("PasswordCategory", secondary=credential_category_links, back_populates="credentials")
+    shared_with = relationship("SharedCredential", back_populates="credential")
 
 
 class SecureNote(Base):
@@ -122,6 +127,28 @@ class AuditLog(Base):
     resource_id = Column(String(50), nullable=True)
     details = Column(Text, nullable=True)  # JSON string for additional context
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class SharedCredential(Base):
+    __tablename__ = "shared_credentials"
+
+    id = Column(Integer, primary_key=True, index=True)
+    credential_id = Column(Integer, ForeignKey("credentials.id", ondelete="CASCADE"), nullable=False)
+    owner_user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    recipient_user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    encrypted_sharing_key = Column(Text, nullable=False)
+    encrypted_shared_data = Column(Text, nullable=False)
+    sharing_iv = Column(String(24), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    credential = relationship("Credential", back_populates="shared_with")
+    owner = relationship("User", foreign_keys=[owner_user_id], back_populates="shared_credentials_owned")
+    recipient = relationship("User", foreign_keys=[recipient_user_id], back_populates="shared_credentials_received")
+
+    __table_args__ = (
+        UniqueConstraint('credential_id', 'recipient_user_id', name='unique_credential_recipient'),
+    )
 
 
 def get_db():

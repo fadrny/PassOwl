@@ -18,6 +18,8 @@ class UserCreate(BaseModel):
     login_password_hash: str
     login_salt: str
     encryption_salt: str
+    public_key: str
+    encrypted_private_key: str
 
 
 class UserLogin(BaseModel):
@@ -48,6 +50,7 @@ class User(UserBase):
     avatar_url: Optional[str] = None
     created_at: datetime
     updated_at: datetime
+    encrypted_private_key: str
     roles: List[Role] = []
 
 
@@ -164,3 +167,77 @@ class TokenData(BaseModel):
 class UserSalts(BaseModel):
     login_salt: str
     encryption_salt: str
+
+
+# Schémata pro sdílení
+class SharedCredentialCreate(BaseModel):
+    credential_id: int
+    recipient_user_id: int
+    encrypted_sharing_key: str
+    encrypted_shared_data: str
+    sharing_iv: str
+
+
+class SharedCredentialResponse(BaseModel):
+    id: int
+    credential_id: int
+    owner_user_id: int
+    recipient_user_id: int
+    encrypted_sharing_key: str
+    encrypted_shared_data: str
+    sharing_iv: str
+    created_at: datetime
+
+    # Informace o původním heslu (title pro zobrazení)
+    credential_title: str
+    owner_username: str
+
+    class Config:
+        from_attributes = True
+
+
+# Nové schéma pro získání veřejného klíče
+class UserPublicKey(BaseModel):
+    id: int
+    username: str
+    public_key: str
+
+    class Config:
+        from_attributes = True
+
+
+# Schéma pro aktualizaci sdíleného hesla
+class SharedCredentialUpdate(BaseModel):
+    encrypted_sharing_key: str
+    encrypted_shared_data: str
+    sharing_iv: str
+
+
+# Schéma pro uživatele se kterým je sdíleno heslo
+class SharedUserResponse(BaseModel):
+    id: int
+    username: str
+    shared_credential_id: int
+    encrypted_sharing_key: str
+    encrypted_shared_data: str
+    sharing_iv: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# Pagination response schemas with total count
+class CredentialListResponse(BaseModel):
+    items: List[Credential]
+    total: int
+
+
+class SharedCredentialListResponse(BaseModel):
+    items: List[SharedCredentialResponse]
+    total: int
+
+
+class SecureNoteListResponse(BaseModel):
+    items: List[SecureNote]
+    total: int

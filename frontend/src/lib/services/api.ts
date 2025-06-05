@@ -83,6 +83,14 @@ export interface CredentialCreate {
   category_ids?: number[];
 }
 
+/** CredentialListResponse */
+export interface CredentialListResponse {
+  /** Items */
+  items: Credential[];
+  /** Total */
+  total: number;
+}
+
 /** CredentialUpdate */
 export interface CredentialUpdate {
   /** Title */
@@ -185,6 +193,14 @@ export interface SecureNoteCreate {
   encryption_iv: string;
 }
 
+/** SecureNoteListResponse */
+export interface SecureNoteListResponse {
+  /** Items */
+  items: SecureNote[];
+  /** Total */
+  total: number;
+}
+
 /** SecureNoteUpdate */
 export interface SecureNoteUpdate {
   /** Encrypted Title */
@@ -193,6 +209,86 @@ export interface SecureNoteUpdate {
   encrypted_content?: string | null;
   /** Encryption Iv */
   encryption_iv?: string | null;
+}
+
+/** SharedCredentialCreate */
+export interface SharedCredentialCreate {
+  /** Credential Id */
+  credential_id: number;
+  /** Recipient User Id */
+  recipient_user_id: number;
+  /** Encrypted Sharing Key */
+  encrypted_sharing_key: string;
+  /** Encrypted Shared Data */
+  encrypted_shared_data: string;
+  /** Sharing Iv */
+  sharing_iv: string;
+}
+
+/** SharedCredentialListResponse */
+export interface SharedCredentialListResponse {
+  /** Items */
+  items: SharedCredentialResponse[];
+  /** Total */
+  total: number;
+}
+
+/** SharedCredentialResponse */
+export interface SharedCredentialResponse {
+  /** Id */
+  id: number;
+  /** Credential Id */
+  credential_id: number;
+  /** Owner User Id */
+  owner_user_id: number;
+  /** Recipient User Id */
+  recipient_user_id: number;
+  /** Encrypted Sharing Key */
+  encrypted_sharing_key: string;
+  /** Encrypted Shared Data */
+  encrypted_shared_data: string;
+  /** Sharing Iv */
+  sharing_iv: string;
+  /**
+   * Created At
+   * @format date-time
+   */
+  created_at: string;
+  /** Credential Title */
+  credential_title: string;
+  /** Owner Username */
+  owner_username: string;
+}
+
+/** SharedCredentialUpdate */
+export interface SharedCredentialUpdate {
+  /** Encrypted Sharing Key */
+  encrypted_sharing_key: string;
+  /** Encrypted Shared Data */
+  encrypted_shared_data: string;
+  /** Sharing Iv */
+  sharing_iv: string;
+}
+
+/** SharedUserResponse */
+export interface SharedUserResponse {
+  /** Id */
+  id: number;
+  /** Username */
+  username: string;
+  /** Shared Credential Id */
+  shared_credential_id: number;
+  /** Encrypted Sharing Key */
+  encrypted_sharing_key: string;
+  /** Encrypted Shared Data */
+  encrypted_shared_data: string;
+  /** Sharing Iv */
+  sharing_iv: string;
+  /**
+   * Created At
+   * @format date-time
+   */
+  created_at: string;
 }
 
 /** Token */
@@ -221,6 +317,8 @@ export interface User {
    * @format date-time
    */
   updated_at: string;
+  /** Encrypted Private Key */
+  encrypted_private_key: string;
   /**
    * Roles
    * @default []
@@ -238,6 +336,10 @@ export interface UserCreate {
   login_salt: string;
   /** Encryption Salt */
   encryption_salt: string;
+  /** Public Key */
+  public_key: string;
+  /** Encrypted Private Key */
+  encrypted_private_key: string;
 }
 
 /** UserLogin */
@@ -246,6 +348,16 @@ export interface UserLogin {
   username: string;
   /** Login Password Hash */
   login_password_hash: string;
+}
+
+/** UserPublicKey */
+export interface UserPublicKey {
+  /** Id */
+  id: number;
+  /** Username */
+  username: string;
+  /** Public Key */
+  public_key: string;
 }
 
 /** UserSalts */
@@ -644,6 +756,33 @@ export class Api<
         format: "json",
         ...params,
       }),
+
+    /**
+     * @description Aktualizace asymetrických klíčů uživatele
+     *
+     * @tags users
+     * @name UpdateUserKeysUsersKeysPut
+     * @summary Update User Keys
+     * @request PUT:/users/keys
+     * @secure
+     */
+    updateUserKeysUsersKeysPut: (
+      query: {
+        /** Public Key */
+        public_key: string;
+        /** Encrypted Private Key */
+        encrypted_private_key: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<any, HTTPValidationError>({
+        path: `/users/keys`,
+        method: "PUT",
+        query: query,
+        secure: true,
+        format: "json",
+        ...params,
+      }),
   };
   credentials = {
     /**
@@ -676,7 +815,7 @@ export class Api<
       },
       params: RequestParams = {},
     ) =>
-      this.request<Credential[], HTTPValidationError>({
+      this.request<CredentialListResponse, HTTPValidationError>({
         path: `/credentials/`,
         method: "GET",
         query: query,
@@ -799,7 +938,7 @@ export class Api<
       },
       params: RequestParams = {},
     ) =>
-      this.request<SecureNote[], HTTPValidationError>({
+      this.request<SecureNoteListResponse, HTTPValidationError>({
         path: `/secure-notes/`,
         method: "GET",
         query: query,
@@ -1070,6 +1209,216 @@ export class Api<
         method: "GET",
         query: query,
         secure: true,
+        format: "json",
+        ...params,
+      }),
+  };
+  api = {
+    /**
+     * @description Sdílení hesla s jiným uživatelem
+     *
+     * @tags sharing
+     * @name ShareCredentialApiSharingSharePost
+     * @summary Share Credential
+     * @request POST:/api/sharing/share
+     * @secure
+     */
+    shareCredentialApiSharingSharePost: (
+      data: SharedCredentialCreate,
+      params: RequestParams = {},
+    ) =>
+      this.request<SharedCredentialResponse, HTTPValidationError>({
+        path: `/api/sharing/share`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Získání hesel sdílených s aktuálním uživatelem
+     *
+     * @tags sharing
+     * @name GetReceivedSharedCredentialsApiSharingReceivedGet
+     * @summary Get Received Shared Credentials
+     * @request GET:/api/sharing/received
+     * @secure
+     */
+    getReceivedSharedCredentialsApiSharingReceivedGet: (
+      query?: {
+        /**
+         * Skip
+         * @default 0
+         */
+        skip?: number;
+        /**
+         * Limit
+         * @default 100
+         */
+        limit?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<SharedCredentialListResponse, HTTPValidationError>({
+        path: `/api/sharing/received`,
+        method: "GET",
+        query: query,
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Získání hesel, která aktuální uživatel sdílí
+     *
+     * @tags sharing
+     * @name GetOwnedSharedCredentialsApiSharingOwnedGet
+     * @summary Get Owned Shared Credentials
+     * @request GET:/api/sharing/owned
+     * @secure
+     */
+    getOwnedSharedCredentialsApiSharingOwnedGet: (params: RequestParams = {}) =>
+      this.request<SharedCredentialResponse[], any>({
+        path: `/api/sharing/owned`,
+        method: "GET",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Zrušení sdílení hesla
+     *
+     * @tags sharing
+     * @name DeleteSharedCredentialApiSharingSharedCredentialIdDelete
+     * @summary Delete Shared Credential
+     * @request DELETE:/api/sharing/{shared_credential_id}
+     * @secure
+     */
+    deleteSharedCredentialApiSharingSharedCredentialIdDelete: (
+      sharedCredentialId: number,
+      params: RequestParams = {},
+    ) =>
+      this.request<any, HTTPValidationError>({
+        path: `/api/sharing/${sharedCredentialId}`,
+        method: "DELETE",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Získání veřejného klíče uživatele
+     *
+     * @tags sharing
+     * @name GetUserPublicKeyApiSharingUsersUserIdPublicKeyGet
+     * @summary Get User Public Key
+     * @request GET:/api/sharing/users/{user_id}/public-key
+     * @secure
+     */
+    getUserPublicKeyApiSharingUsersUserIdPublicKeyGet: (
+      userId: number,
+      params: RequestParams = {},
+    ) =>
+      this.request<UserPublicKey, HTTPValidationError>({
+        path: `/api/sharing/users/${userId}/public-key`,
+        method: "GET",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Vyhledání uživatelů pro sdílení
+     *
+     * @tags sharing
+     * @name SearchUsersApiSharingUsersSearchGet
+     * @summary Search Users
+     * @request GET:/api/sharing/users/search
+     * @secure
+     */
+    searchUsersApiSharingUsersSearchGet: (
+      query: {
+        /** Q */
+        q: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<any, HTTPValidationError>({
+        path: `/api/sharing/users/search`,
+        method: "GET",
+        query: query,
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Získání seznamu uživatelů, se kterými je sdíleno dané heslo
+     *
+     * @tags sharing
+     * @name GetCredentialSharedUsersApiSharingCredentialCredentialIdUsersGet
+     * @summary Get Credential Shared Users
+     * @request GET:/api/sharing/credential/{credential_id}/users
+     * @secure
+     */
+    getCredentialSharedUsersApiSharingCredentialCredentialIdUsersGet: (
+      credentialId: number,
+      params: RequestParams = {},
+    ) =>
+      this.request<SharedUserResponse[], HTTPValidationError>({
+        path: `/api/sharing/credential/${credentialId}/users`,
+        method: "GET",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Zrušení sdílení hesla s konkrétním uživatelem
+     *
+     * @tags sharing
+     * @name DeleteCredentialSharingApiSharingCredentialCredentialIdUserUserIdDelete
+     * @summary Delete Credential Sharing
+     * @request DELETE:/api/sharing/credential/{credential_id}/user/{user_id}
+     * @secure
+     */
+    deleteCredentialSharingApiSharingCredentialCredentialIdUserUserIdDelete: (
+      credentialId: number,
+      userId: number,
+      params: RequestParams = {},
+    ) =>
+      this.request<any, HTTPValidationError>({
+        path: `/api/sharing/credential/${credentialId}/user/${userId}`,
+        method: "DELETE",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Aktualizace sdíleného hesla
+     *
+     * @tags sharing
+     * @name UpdateCredentialSharingApiSharingCredentialCredentialIdUserUserIdPut
+     * @summary Update Credential Sharing
+     * @request PUT:/api/sharing/credential/{credential_id}/user/{user_id}
+     * @secure
+     */
+    updateCredentialSharingApiSharingCredentialCredentialIdUserUserIdPut: (
+      credentialId: number,
+      userId: number,
+      data: SharedCredentialUpdate,
+      params: RequestParams = {},
+    ) =>
+      this.request<SharedCredentialResponse, HTTPValidationError>({
+        path: `/api/sharing/credential/${credentialId}/user/${userId}`,
+        method: "PUT",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),

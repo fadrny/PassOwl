@@ -1,14 +1,14 @@
 <script lang="ts">
-    import Button from '$lib/components/ui/Button.svelte';
+    import Button from '../ui/Button.svelte';
     import type { PasswordCategory } from '$lib/services/api';
 
-    interface PasswordEntry {
+    export interface TransformedPassword {
         id: string;
         name: string;
         username: string;
         encryptedPassword: string;
         decryptedPassword?: string;
-        url?: string | null;
+        url?: string;
         category?: {
             id: string;
             name: string;
@@ -19,25 +19,38 @@
     }
 
     interface Props {
-        passwords: PasswordEntry[];
-        categories?: PasswordCategory[];
+        passwords: TransformedPassword[];
+        categories: PasswordCategory[];
+        loading: boolean;
+        // Pagination props
+        currentPage?: number;
+        totalPages?: number;
+        totalCount?: number;
+        // Event handlers
         onDecrypt?: (id: string) => void;
         onEdit?: (id: string) => void;
         onShare?: (id: string) => void;
         onSortChange?: (sortBy: string, direction: string) => void;
         onCategoryFilter?: (categoryId: number | null) => void;
+        onPageChange?: (page: number) => void;
+        // Current state
         currentSort?: { by: string; direction: string };
         currentCategoryFilter?: number | null;
     }
 
     let { 
-        passwords = [], 
-        categories = [],
+        passwords, 
+        categories, 
+        loading = false,
+        currentPage = 1,
+        totalPages = 1,
+        totalCount = 0,
         onDecrypt, 
         onEdit, 
         onShare,
         onSortChange,
         onCategoryFilter,
+        onPageChange,
         currentSort = { by: '', direction: 'asc' },
         currentCategoryFilter = null
     }: Props = $props();
@@ -85,15 +98,25 @@
         }
         return currentSort.direction === 'asc' ? '↑' : '↓';
     }
+
+    // Pagination helpers
+    function handlePageChange(page: number) {
+        if (page >= 1 && page <= totalPages) {
+            onPageChange?.(page);
+        }
+    }
+
 </script>
 
 <div class="bg-white shadow overflow-hidden sm:rounded-md">
     <!-- Ovládací panel pro filtrování a řazení -->
     <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
         <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-            <h3 class="text-lg font-medium text-gray-900">
-                Hesla ({passwords.length})
-            </h3>
+            <div>
+                <h3 class="text-lg font-medium text-gray-900">
+                    Hesla ({totalCount})
+                </h3>
+            </div>
             
             <div class="flex flex-col sm:flex-row gap-3">
                 <!-- Filtr podle kategorie -->
@@ -128,7 +151,11 @@
         </div>
     </div>
 
-    {#if passwords.length === 0}
+    {#if loading}
+        <div class="flex justify-center py-12">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        </div>
+    {:else if passwords.length === 0}
         <div class="text-center py-12">
             <svg
                 class="mx-auto h-12 w-12 text-gray-400"
@@ -202,36 +229,29 @@
                     {#each passwords as password (password.id)}
                         <tr class="hover:bg-gray-50">
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="flex items-center">
-                                    <div class="text-sm font-medium text-gray-900">
-                                        {password.name}
-                                    </div>
-                                    {#if password.url}
-                                        <a href={password.url}
+                                <div class="text-sm font-medium text-gray-900">
+                                    {password.name}
+                                </div>
+                                {#if password.url}
+                                    <div class="text-sm text-gray-500">
+                                        <a
+                                            href={password.url}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            class="ml-2 text-indigo-600 hover:text-indigo-500"
-                                            title="Otevřít URL"
-                                            aria-label="Odkaz na web"
+                                            class="text-blue-600 hover:text-blue-800"
                                         >
-                                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path
-                                                    stroke-linecap="round"
-                                                    stroke-linejoin="round"
-                                                    stroke-width="2"
-                                                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-2M14 4h6m0 0v6m0-6L10 14"
-                                                />
-                                            </svg>
+                                            {password.url}
                                         </a>
-                                    {/if}
-                                </div>
+                                    </div>
+                                {/if}
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="flex items-center">
-                                    <span class="text-sm text-gray-900">{password.username}</span>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-mono">{password.username}</span>
                                     <button
+                                        type="button"
                                         onclick={() => copyToClipboard(password.username)}
-                                        class="ml-2 p-1 text-gray-400 hover:text-gray-600"
+                                        class="text-gray-400 hover:text-gray-600"
                                         title="Kopírovat uživatelské jméno"
                                         aria-label="Kopírovat uživatelské jméno"
                                     >
@@ -246,15 +266,14 @@
                                     </button>
                                 </div>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="flex items-center">
-                                    {#if decryptedPasswordIds.has(password.id)}
-                                        <span class="text-sm text-gray-900 font-mono mr-2">
-                                            {password.decryptedPassword}
-                                        </span>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {#if decryptedPasswordIds.has(password.id)}
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-mono">••••••••••</span>
                                         <button
-                                            onclick={() => copyToClipboard(password.decryptedPassword || '')}
-                                            class="p-1 text-gray-400 hover:text-gray-600 mr-2"
+                                            type="button"
+                                            onclick={() => copyToClipboard(password.decryptedPassword!)}
+                                            class="text-gray-400 hover:text-gray-600"
                                             title="Kopírovat heslo"
                                             aria-label="Kopírovat heslo"
                                         >
@@ -274,19 +293,21 @@
                                         >
                                             Skrýt
                                         </Button>
-                                    {:else}
-                                        <span class="text-sm text-gray-400 mr-2">••••••••</span>
+                                    </div>
+                                {:else}
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-gray-400 font-mono">•••••••••</span>
                                         <Button
-                                            variant="primary"
+                                            variant="secondary"
                                             size="sm"
                                             onclick={() => handleDecrypt(password.id)}
                                         >
                                             Zobrazit
                                         </Button>
-                                    {/if}
-                                </div>
+                                    </div>
+                                {/if}
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                 {#if password.category}
                                     <span
                                         class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium text-white"
@@ -295,7 +316,7 @@
                                         {password.category.name}
                                     </span>
                                 {:else}
-                                    <span class="text-sm text-gray-400">Bez kategorie</span>
+                                    <span class="text-gray-400">Bez kategorie</span>
                                 {/if}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -326,5 +347,79 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- Pagination -->
+        {#if totalPages > 1}
+            <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+                <div class="flex-1 flex justify-between sm:hidden">
+                    <!-- Mobile pagination -->
+                    <Button
+                        variant="secondary"
+                        onclick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage <= 1}
+                    >
+                        Předchozí
+                    </Button>
+                    <Button
+                        variant="secondary"
+                        onclick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage >= totalPages}
+                    >
+                        Další
+                    </Button>
+                </div>
+                <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                    <div>
+                        <p class="text-sm text-gray-700">
+                            Stránka <span class="font-medium">{currentPage}</span> z <span class="font-medium">{totalPages}</span>
+                        </p>
+                    </div>
+                    <div>
+                        <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                            <!-- Previous button -->
+                            <button
+                                onclick={() => handlePageChange(currentPage - 1)}
+                                disabled={currentPage <= 1}
+                                class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <span class="sr-only">Předchozí</span>
+                                <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+
+                            <!-- Page numbers -->
+                            {#each Array.from({length: Math.min(5, totalPages)}, (_, i) => {
+                                const startPage = Math.max(1, currentPage - 2);
+                                const endPage = Math.min(totalPages, startPage + 4);
+                                const adjustedStartPage = Math.max(1, endPage - 4);
+                                return adjustedStartPage + i;
+                            }).filter(page => page <= totalPages) as page}
+                                <button
+                                    onclick={() => handlePageChange(page)}
+                                    class="relative inline-flex items-center px-4 py-2 border text-sm font-medium {page === currentPage 
+                                        ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600' 
+                                        : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'}"
+                                >
+                                    {page}
+                                </button>
+                            {/each}
+
+                            <!-- Next button -->
+                            <button
+                                onclick={() => handlePageChange(currentPage + 1)}
+                                disabled={currentPage >= totalPages}
+                                class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <span class="sr-only">Další</span>
+                                <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        {/if}
     {/if}
 </div>

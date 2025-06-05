@@ -141,4 +141,20 @@ export class AuthStore {
         if (!browser) return null;
         return localStorage.getItem(STORAGE_KEYS.ENCRYPTION_SALT);
     }
+
+    /**
+     * Získání uživatelského jména
+     */
+    static getUsername(): string | null {
+        if (!browser) return null;
+        return localStorage.getItem(STORAGE_KEYS.USERNAME);
+    }
+
+    /**
+     * Získání avatar URL
+     */
+    static getAvatarUrl(): string | null {
+        if (!browser) return null;
+        return localStorage.getItem(STORAGE_KEYS.AVATAR_URL);
+    }
 }

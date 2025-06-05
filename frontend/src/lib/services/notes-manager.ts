@@ -1,7 +1,7 @@
 import { api } from './api-client';
 import { encryptData, decryptData } from './crypto';
 import { encryptionKeyManager } from './encryption-key-manager';
-import type { SecureNote, SecureNoteCreate, SecureNoteUpdate } from './api';
+import type { SecureNote, SecureNoteCreate, SecureNoteUpdate, SecureNoteListResponse } from './api';
 import type { ApiResponse } from '$lib/types/api';
 
 /**
@@ -36,29 +36,28 @@ export class NotesManager {
    * Kontrola dostupnosti šifrovacího klíče
    */
   private static ensureKeyAvailable(): string {
-    const encryptionKey = encryptionKeyManager.getEncryptionKey();
-    if (!encryptionKey) {
-      throw new Error('Šifrovací klíč není dostupný. Zadejte prosím master heslo.');
+    const key = encryptionKeyManager.getEncryptionKey();
+    if (!key) {
+      throw new Error('Šifrovací klíč není dostupný. Přihlaste se prosím.');
     }
     encryptionKeyManager.refreshKeyLifetime();
-    return encryptionKey;
+    return key;
   }
 
   /**
    * Šifrování poznámky (title a content zvlášť se stejným IV)
    */
   private static async encryptNote(title: string, content: string): Promise<{ encryptedTitle: string; encryptedContent: string; iv: string }> {
-    const encryptionKey = this.ensureKeyAvailable();
+    const key = this.ensureKeyAvailable();
     
-    // Šifrujeme title
-    const titleEncryption = await encryptData(title, encryptionKey);
-    // Šifrujeme content se stejným IV
-    const contentEncryption = await encryptData(content, encryptionKey, titleEncryption.iv);
+    // Použijeme stejné IV pro title i content
+    const { encryptedData: encryptedTitle, iv } = await encryptData(title, key);
+    const { encryptedData: encryptedContent } = await encryptData(content, key, iv);
     
     return {
-      encryptedTitle: titleEncryption.encryptedData,
-      encryptedContent: contentEncryption.encryptedData,
-      iv: titleEncryption.iv
+      encryptedTitle,
+      encryptedContent,
+      iv
     };
   }
 
@@ -66,32 +65,31 @@ export class NotesManager {
    * Dešifrování poznámky z SecureNote
    */
   private static async decryptNoteData(note: SecureNote): Promise<DecryptedNote> {
-    const encryptionKey = this.ensureKeyAvailable();
+    const key = this.ensureKeyAvailable();
     
-    try {
-      const decryptedTitle = await decryptData(note.encrypted_title, note.encryption_iv, encryptionKey);
-      const decryptedContent = await decryptData(note.encrypted_content, note.encryption_iv, encryptionKey);
-      
-      return {
-        id: note.id,
-        title: decryptedTitle,
-        content: decryptedContent,
-        created_at: note.created_at,
-        updated_at: note.updated_at
-      };
-    } catch (error) {
-      console.error('Decryption error for note:', note.id, error);
-      throw new Error('Nepodařilo se dešifrovat poznámku');
-    }
+    const title = await decryptData(note.encrypted_title, note.encryption_iv, key);
+    const content = await decryptData(note.encrypted_content, note.encryption_iv, key);
+    
+    return {
+      id: note.id,
+      title,
+      content,
+      created_at: note.created_at,
+      updated_at: note.updated_at
+    };
   }
 
   /**
-   * Získání seznamu poznámek
+   * Získání seznamu poznámek s pagination
    */
-  static async getNotes(params?: { skip?: number; limit?: number }): Promise<ApiResponse<SecureNote[]>> {
+  static async getNotes(params?: { 
+    skip?: number; 
+    limit?: number 
+  }): Promise<ApiResponse<{ items: SecureNote[]; total: number }>> {
     try {
       const response = await api.secureNotes.getSecureNotesSecureNotesGet(params);
-      return { data: response.data };
+      // Nyní response.data je SecureNoteListResponse s items a total
+      return { data: { items: response.data.items, total: response.data.total } };
     } catch (error: any) {
       console.error('API error getting notes:', error);
       
@@ -118,8 +116,8 @@ export class NotesManager {
    */
   static async decryptNote(note: SecureNote): Promise<ApiResponse<DecryptedNote>> {
     try {
-      const decryptedNote = await this.decryptNoteData(note);
-      return { data: decryptedNote };
+      const decrypted = await this.decryptNoteData(note);
+      return { data: decrypted };
     } catch (error: any) {
       return {
         error: {

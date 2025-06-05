@@ -103,10 +103,11 @@ export class PasswordManager {
     sort_by?: string;
     sort_direction?: string;
     filter_category?: number | null;
-  }): Promise<ApiResponse<Credential[]>> {
+  }): Promise<ApiResponse<{ items: Credential[]; total: number }>> {
     try {
       const response = await api.credentials.getCredentialsCredentialsGet(params || {});
-      return { data: response.data };
+      // Nyní response.data je CredentialListResponse s items a total
+      return { data: { items: response.data.items, total: response.data.total } };
     } catch (error: any) {
       console.error('API error getting passwords:', error);
       
