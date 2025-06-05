@@ -35,3 +35,19 @@ def update_user_avatar(
     )
     
     return updated_user
+
+@router.put("/keys")
+def update_user_keys(
+    public_key: str,
+    encrypted_private_key: str,
+    db: Session = Depends(database.get_db),
+    current_user: schemas.User = Depends(auth.get_current_user)
+):
+    """Aktualizace asymetrických klíčů uživatele"""
+    updated_user = crud.update_user_keys(db, current_user.id, public_key, encrypted_private_key)
+    if not updated_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    return {"message": "Keys updated successfully"}

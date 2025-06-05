@@ -302,3 +302,86 @@ def get_audit_logs(db: Session, skip: int = 0, limit: int = 100, user_id: Option
     if user_id:
         query = query.filter(database.AuditLog.user_id == user_id)
     return query.order_by(database.AuditLog.created_at.desc()).offset(skip).limit(limit).all()
+
+
+# Shared Credentials CRUD
+def create_shared_credential(db: Session, shared_credential: schemas.SharedCredentialCreate, owner_user_id: int):
+    # Ověř, že vlastník může sdílet toto heslo
+    credential = db.query(database.Credential).filter(
+        and_(database.Credential.id == shared_credential.credential_id, 
+             database.Credential.user_id == owner_user_id)
+    ).first()
+    
+    if not credential:
+        return None
+    
+    # Ověř, že příjemce existuje
+    recipient = db.query(database.User).filter(database.User.id == shared_credential.recipient_user_id).first()
+    if not recipient:
+        return None
+    
+    db_shared = database.SharedCredential(
+        credential_id=shared_credential.credential_id,
+        owner_user_id=owner_user_id,
+        recipient_user_id=shared_credential.recipient_user_id,
+        encrypted_sharing_key=shared_credential.encrypted_sharing_key,
+        encrypted_shared_data=shared_credential.encrypted_shared_data,
+        sharing_iv=shared_credential.sharing_iv
+    )
+    
+    db.add(db_shared)
+    db.commit()
+    db.refresh(db_shared)
+    return db_shared
+
+def get_shared_credentials_received(db: Session, user_id: int):
+    return db.query(database.SharedCredential).join(
+        database.Credential, database.SharedCredential.credential_id == database.Credential.id
+    ).join(
+        database.User, database.SharedCredential.owner_user_id == database.User.id
+    ).filter(
+        database.SharedCredential.recipient_user_id == user_id
+    ).all()
+
+def get_shared_credentials_owned(db: Session, user_id: int):
+    return db.query(database.SharedCredential).join(
+        database.Credential, database.SharedCredential.credential_id == database.Credential.id
+    ).filter(
+        database.SharedCredential.owner_user_id == user_id
+    ).all()
+
+def delete_shared_credential(db: Session, shared_credential_id: int, user_id: int):
+    # User může smazat pouze své vlastní sdílení (jako owner)
+    db_shared = db.query(database.SharedCredential).filter(
+        and_(database.SharedCredential.id == shared_credential_id,
+             database.SharedCredential.owner_user_id == user_id)
+    ).first()
+    
+    if db_shared:
+        db.delete(db_shared)
+        db.commit()
+        return True
+    return False
+
+def get_user_public_key(db: Session, user_id: int):
+    user = db.query(database.User).filter(database.User.id == user_id).first()
+    if user and user.public_key:
+        return {"id": user.id, "username": user.username, "public_key": user.public_key}
+    return None
+
+def search_users_by_username(db: Session, username_query: str, current_user_id: int, limit: int = 10):
+    return db.query(database.User).filter(
+        and_(
+            database.User.username.ilike(f"%{username_query}%"),
+            database.User.id != current_user_id  # Nevracet současného uživatele
+        )
+    ).limit(limit).all()
+
+def update_user_keys(db: Session, user_id: int, public_key: str, encrypted_private_key: str):
+    db_user = db.query(database.User).filter(database.User.id == user_id).first()
+    if db_user:
+        db_user.public_key = public_key
+        db_user.encrypted_private_key = encrypted_private_key
+        db.commit()
+        db.refresh(db_user)
+    return db_user

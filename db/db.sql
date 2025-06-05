@@ -1,5 +1,6 @@
 -- PassOwl Database Schema
 -- Drop existing tables if they exist (for clean setup)
+DROP TABLE IF EXISTS shared_credentials CASCADE;
 DROP TABLE IF EXISTS credential_category_links CASCADE;
 DROP TABLE IF EXISTS user_roles CASCADE;
 DROP TABLE IF EXISTS credentials CASCADE;
@@ -17,7 +18,7 @@ CREATE TABLE roles (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create users table
+-- Create users table (rozšířeno o asymetrické klíče)
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     username VARCHAR NOT NULL UNIQUE,
@@ -25,6 +26,8 @@ CREATE TABLE users (
     login_salt VARCHAR NOT NULL,
     encryption_salt VARCHAR NOT NULL,
     avatar_url TEXT,
+    public_key TEXT, -- RSA/ECC veřejný klíč pro sdílení
+    encrypted_private_key TEXT, -- Privátní klíč zašifrovaný master heslem
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -67,6 +70,20 @@ CREATE TABLE credential_category_links (
     PRIMARY KEY (credential_id, category_id)
 );
 
+-- Create shared_credentials table (nová tabulka pro sdílení)
+CREATE TABLE shared_credentials (
+    id SERIAL PRIMARY KEY,
+    credential_id INTEGER NOT NULL REFERENCES credentials(id) ON DELETE CASCADE,
+    owner_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    recipient_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    encrypted_sharing_key TEXT NOT NULL, -- sharing_key zašifrovaný veřejným klíčem příjemce
+    encrypted_shared_data TEXT NOT NULL, -- data hesla zašifrovaná sharing_key
+    sharing_iv VARCHAR(24) NOT NULL, -- IV pro dešifrování shared_data
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    -- Zabránit duplicitnímu sdílení stejného hesla stejnému uživateli
+    UNIQUE(credential_id, recipient_user_id)
+);
+
 CREATE TABLE audit_logs
 (
     id SERIAL PRIMARY KEY,
@@ -96,6 +113,9 @@ CREATE INDEX idx_users_username ON users(username);
 CREATE INDEX idx_credentials_user_id ON credentials(user_id);
 CREATE INDEX idx_password_categories_user_id ON password_categories(user_id);
 CREATE INDEX idx_secure_notes_user_id ON secure_notes(user_id);
+CREATE INDEX idx_shared_credentials_owner ON shared_credentials(owner_user_id);
+CREATE INDEX idx_shared_credentials_recipient ON shared_credentials(recipient_user_id);
+CREATE INDEX idx_shared_credentials_credential ON shared_credentials(credential_id);
 
 -- Insert default roles
 INSERT INTO roles (name, description) VALUES 

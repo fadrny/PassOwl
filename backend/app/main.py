@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import auth, users, credentials, secure_notes, categories, admin
+from .routers import auth, users, credentials, secure_notes, categories, admin, sharing
 from .database import engine, Base
 import os
 from dotenv import load_dotenv
@@ -32,6 +32,7 @@ app.include_router(credentials.router)
 app.include_router(secure_notes.router)
 app.include_router(categories.router)
 app.include_router(admin.router)
+app.include_router(sharing.router)
 
 
 @app.get("/")

@@ -18,6 +18,8 @@ class UserCreate(BaseModel):
     login_password_hash: str
     login_salt: str
     encryption_salt: str
+    public_key: Optional[str] = None
+    encrypted_private_key: Optional[str] = None
 
 
 class UserLogin(BaseModel):
@@ -164,3 +166,40 @@ class TokenData(BaseModel):
 class UserSalts(BaseModel):
     login_salt: str
     encryption_salt: str
+
+
+# Schémata pro sdílení
+class SharedCredentialCreate(BaseModel):
+    credential_id: int
+    recipient_user_id: int
+    encrypted_sharing_key: str
+    encrypted_shared_data: str
+    sharing_iv: str
+
+
+class SharedCredentialResponse(BaseModel):
+    id: int
+    credential_id: int
+    owner_user_id: int
+    recipient_user_id: int
+    encrypted_sharing_key: str
+    encrypted_shared_data: str
+    sharing_iv: str
+    created_at: datetime
+
+    # Informace o původním heslu (title pro zobrazení)
+    credential_title: str
+    owner_username: str
+
+    class Config:
+        from_attributes = True
+
+
+# Nové schéma pro získání veřejného klíče
+class UserPublicKey(BaseModel):
+    id: int
+    username: str
+    public_key: str
+
+    class Config:
+        from_attributes = True
