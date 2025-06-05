@@ -226,7 +226,27 @@ export class AuthService {
 
             // Aktualizace tokenu v aplikaci
             api.setSecurityData(token.access_token);
-            AuthStore.setAuthData(token.access_token, username, AuthStore.getEncryptionSalt()!);
+
+            // NEJLEPŠÍ ŘEŠENÍ: Načíst fresh data z API po reauth
+            try {
+                const userInfo = await api.users.getCurrentUserInfoUsersMeGet();
+                AuthStore.setAuthData(
+                    token.access_token, 
+                    username, 
+                    AuthStore.getEncryptionSalt()!,
+                    userInfo.data.avatar_url || undefined
+                );
+            } catch (error) {
+                console.error('Chyba při načítání user info po reauth:', error);
+                // Fallback - zachovat současný avatar
+                const currentAvatarUrl = AuthStore.getAvatarUrl();
+                AuthStore.setAuthData(
+                    token.access_token, 
+                    username, 
+                    AuthStore.getEncryptionSalt()!,
+                    currentAvatarUrl ? currentAvatarUrl : undefined
+                );
+            }
 
             return { 
                 success: true, 
