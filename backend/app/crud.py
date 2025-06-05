@@ -30,7 +30,9 @@ def create_user(db: Session, user: schemas.UserCreate):
         username=user.username,
         login_password_hash=user.login_password_hash,
         login_salt=user.login_salt,
-        encryption_salt=user.encryption_salt
+        encryption_salt=user.encryption_salt,
+        encrypted_private_key = user.encrypted_private_key,
+        public_key=user.public_key
     )
     db_user.roles.append(user_role)
     db.add(db_user)
@@ -377,6 +379,7 @@ def search_users_by_username(db: Session, username_query: str, current_user_id: 
         )
     ).limit(limit).all()
 
+# Currently not used in the codebase, but can be used for updating user keys in future
 def update_user_keys(db: Session, user_id: int, public_key: str, encrypted_private_key: str):
     db_user = db.query(database.User).filter(database.User.id == user_id).first()
     if db_user:

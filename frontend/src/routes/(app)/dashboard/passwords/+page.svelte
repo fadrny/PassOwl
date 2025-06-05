@@ -4,11 +4,15 @@
     import { CategoryManager } from '$lib/services/category-manager';
     import type { Credential, PasswordCategory } from '$lib/services/api';
     import PasswordTable from '$lib/components/tables/PasswordTable.svelte';
+    import SharedPasswordTable from '$lib/components/tables/SharedPasswordTable.svelte';
     import PageHeader from '$lib/components/layout/PageHeader.svelte';
     import ErrorMessage from '$lib/components/ui/ErrorMessage.svelte';
-    import Button from '$lib/components/ui/Button.svelte';
     import AddPasswordModal from '$lib/components/modals/AddPasswordModal.svelte';
     import EditPasswordModal from '$lib/components/modals/EditPasswordModal.svelte';
+    import SharePasswordModal from '$lib/components/modals/SharePasswordModal.svelte';
+    import MasterPasswordModal from '$lib/components/modals/MasterPasswordModal.svelte';
+    import { SharingManager } from '$lib/services/sharing-manager';
+    import type { SharedCredentialResponse, DecryptedSharedPassword } from '$lib/services/sharing-manager';
 
     let passwords: Credential[] = $state([]);
     let categories: PasswordCategory[] = $state([]);
@@ -24,10 +28,20 @@
     let currentSort = $state({ by: '', direction: 'asc' });
     let currentCategoryFilter: number | null = $state(null);
 
+    // Nový stav pro sdílení
+    let sharedPasswords: SharedCredentialResponse[] = $state([]);
+    let decryptedSharedPasswords = $state(new Map<number, DecryptedSharedPassword>());
+    let showShareModal = $state(false);
+    let showMasterPasswordModal = $state(false);
+    let sharePasswordId = $state(0);
+    let sharePasswordTitle = $state('');
+    let pendingDecryptId = $state(0);
+
     // Načtení hesel při načtení komponenty
-    onMount(() => {
-        loadCategories();
-        loadPasswords();
+    onMount(async () => {
+        await loadPasswords();
+        await loadCategories();
+        await loadSharedPasswords();
     });
 
     async function loadCategories() {
@@ -75,6 +89,19 @@
             error = 'Nepodařilo se načíst hesla';
         } finally {
             loading = false;
+        }
+    }
+
+    async function loadSharedPasswords() {
+        try {
+            const result = await SharingManager.getSharedPasswords();
+            if (result.error) {
+                console.error('Error loading shared passwords:', result.error);
+                return;
+            }
+            sharedPasswords = result.data || [];
+        } catch (err) {
+            console.error('Error loading shared passwords:', err);
         }
     }
 
@@ -159,13 +186,61 @@
     }
 
     function handleShare(id: string) {
-        console.log('Share password:', id);
-        // TODO: Implementovat sdílení hesla
+        const passwordId = parseInt(id);
+        const password = passwords.find(p => p.id === passwordId);
+        
+        if (password) {
+            sharePasswordId = passwordId;
+            sharePasswordTitle = password.title;
+            showShareModal = true;
+        }
     }
 
     function handlePasswordAdded() {
         // Znovu načíst hesla po přidání nového
         loadPasswords();
+        showAddModal = false;
+    }
+
+    function handlePasswordUpdated() {
+        loadPasswords();
+        showEditModal = false;
+    }
+
+    function handlePasswordDeleted() {
+        loadPasswords();
+        showEditModal = false;
+    }
+
+    function handlePasswordShared() {
+        showShareModal = false;
+        loadSharedPasswords(); // Načíst znovu sdílená hesla
+    }
+
+    function handleDecryptShared(sharedId: number) {
+        pendingDecryptId = sharedId;
+        showMasterPasswordModal = true;
+    }
+
+    async function handleMasterPasswordConfirm(masterPassword: string) {
+        try {
+            const sharedCredential = sharedPasswords.find(sp => sp.id === pendingDecryptId);
+            if (!sharedCredential) {
+                throw new Error('Sdílené heslo nenalezeno');
+            }
+
+            const result = await SharingManager.decryptSharedPassword(sharedCredential, masterPassword);
+            if (result.error) {
+                throw new Error(result.error.detail);
+            }
+
+            if (result.data) {
+                decryptedSharedPasswords.set(pendingDecryptId, result.data);
+                decryptedSharedPasswords = new Map(decryptedSharedPasswords);
+            }
+        } catch (error: any) {
+            throw error; // Propagate error to modal
+        }
     }
 </script>
 
@@ -183,34 +258,35 @@
 
     {#if error}
         <ErrorMessage message={error} />
-        <div class="flex justify-center">
-            <Button variant="secondary" onclick={loadPasswords}>
-                Zkusit znovu
-            </Button>
-        </div>
-    {:else if loading}
-        <div class="flex justify-center py-12">
-            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-        </div>
-    {:else}
-        <PasswordTable 
-            passwords={transformedPasswords}
-            categories={categories}
-            onDecrypt={handleDecrypt}
-            onEdit={handleEdit}
-            onShare={handleShare}
-            onSortChange={handleSortChange}
-            onCategoryFilter={handleCategoryFilter}
-            currentSort={currentSort}
-            currentCategoryFilter={currentCategoryFilter}
-        />
     {/if}
+
+    <!-- Vlastní hesla -->
+    <PasswordTable 
+        passwords={transformedPasswords}
+        categories={categories}
+        loading={loading}
+        onDecrypt={handleDecrypt}
+        onEdit={handleEdit}
+        onShare={handleShare}
+        onSortChange={handleSortChange}
+        onCategoryFilter={handleCategoryFilter}
+        currentSort={currentSort}
+        currentCategoryFilter={currentCategoryFilter}
+    />
+
+    <!-- Sdílená hesla -->
+    <SharedPasswordTable
+        sharedPasswords={sharedPasswords}
+        decryptedSharedPasswords={decryptedSharedPasswords}
+        onDecrypt={handleDecryptShared}
+    />
 </div>
 
-<!-- Modal pro přidání hesla -->
-<AddPasswordModal 
-    open={showAddModal} 
+<!-- Modály -->
+<AddPasswordModal
+    open={showAddModal}
     onClose={() => showAddModal = false}
+    categories={categories}
     onPasswordAdded={handlePasswordAdded}
 />
 
@@ -219,6 +295,24 @@
     onClose={() => showEditModal = false}
     passwordId={editingPasswordId}
     initialData={editingPasswordData}
-    onPasswordUpdated={loadPasswords}
+    categories={categories}
+    onPasswordUpdated={handlePasswordUpdated}
+    onPasswordDeleted={handlePasswordDeleted}
+/>
+
+<SharePasswordModal
+    open={showShareModal}
+    onClose={() => showShareModal = false}
+    passwordId={sharePasswordId}
+    passwordTitle={sharePasswordTitle}
+    onShared={handlePasswordShared}
+/>
+
+<MasterPasswordModal
+    open={showMasterPasswordModal}
+    title="Dešifrování sdíleného hesla"
+    description="Pro dešifrování sdíleného hesla zadejte své master heslo."
+    onConfirm={handleMasterPasswordConfirm}
+    onClose={() => showMasterPasswordModal = false}
 />
 

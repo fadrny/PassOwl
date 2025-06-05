@@ -15,7 +15,7 @@ export async function generateSalt(): Promise<string> {
  * Generuje kryptograficky bezpečný IV (Initialization Vector)
  */
 export async function generateIV(): Promise<string> {
-    const array = new Uint8Array(12); // 12 bytů pro AES-GCM
+    const array = new Uint8Array(12);
     crypto.getRandomValues(array);
     return btoa(String.fromCharCode(...array));
 }
@@ -87,61 +87,150 @@ async function importKeyFromBase64(keyBase64: string): Promise<CryptoKey> {
 }
 
 /**
- * Šifruje data pomocí AES-256-GCM s možností předat vlastní IV
+ * Šifruje data pomocí AES-GCM
  */
-export async function encryptData(plaintext: string, encryptionKeyBase64: string, customIv?: string): Promise<{ encryptedData: string; iv: string }> {
+export async function encryptData(plaintext: string, keyBase64: string): Promise<{ encryptedData: string; iv: string }> {
+    const key = await importKeyFromBase64(keyBase64);
     const encoder = new TextEncoder();
     const data = encoder.encode(plaintext);
     
-    // Použijeme custom IV nebo vygenerujeme nový
-    const iv = customIv || await generateIV();
-    const ivBuffer = Uint8Array.from(atob(iv), c => c.charCodeAt(0));
+    const iv = crypto.getRandomValues(new Uint8Array(12));
     
-    // Import klíče
-    const key = await importKeyFromBase64(encryptionKeyBase64);
-    
-    // Šifrování
     const encryptedBuffer = await crypto.subtle.encrypt(
-        {
-            name: 'AES-GCM',
-            iv: ivBuffer
-        },
+        { name: 'AES-GCM', iv: iv },
         key,
         data
     );
     
-    // Konverze na base64
     const encryptedData = btoa(String.fromCharCode(...new Uint8Array(encryptedBuffer)));
+    const ivBase64 = btoa(String.fromCharCode(...iv));
     
-    return { encryptedData, iv };
+    return { encryptedData, iv: ivBase64 };
 }
 
 /**
- * Dešifruje data pomocí AES-256-GCM
+ * Dešifruje data pomocí AES-GCM
  */
-export async function decryptData(encryptedDataBase64: string, ivBase64: string, encryptionKeyBase64: string): Promise<string> {
-    try {
-        // Konverze z base64
-        const encryptedBuffer = Uint8Array.from(atob(encryptedDataBase64), c => c.charCodeAt(0));
-        const ivBuffer = Uint8Array.from(atob(ivBase64), c => c.charCodeAt(0));
-        
-        // Import klíče
-        const key = await importKeyFromBase64(encryptionKeyBase64);
-        
-        // Dešifrování
-        const decryptedBuffer = await crypto.subtle.decrypt(
-            {
-                name: 'AES-GCM',
-                iv: ivBuffer
-            },
-            key,
-            encryptedBuffer
-        );
-        
-        // Konverze zpět na string
-        const decoder = new TextDecoder();
-        return decoder.decode(decryptedBuffer);
-    } catch (error) {
-        throw new Error('Nepodařilo se dešifrovat data. Možná je poškozený klíč nebo data.');
-    }
+export async function decryptData(encryptedData: string, ivBase64: string, keyBase64: string): Promise<string> {
+    const key = await importKeyFromBase64(keyBase64);
+    
+    const encryptedBuffer = Uint8Array.from(atob(encryptedData), c => c.charCodeAt(0));
+    const iv = Uint8Array.from(atob(ivBase64), c => c.charCodeAt(0));
+    
+    const decryptedBuffer = await crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: iv },
+        key,
+        encryptedBuffer
+    );
+    
+    const decoder = new TextDecoder();
+    return decoder.decode(decryptedBuffer);
+}
+
+// ===== NOVÉ FUNKCE PRO ASYMETRICKÉ ŠIFROVÁNÍ =====
+
+/**
+ * Generuje pár RSA klíčů pro asymetrické šifrování
+ */
+export async function generateRSAKeyPair(): Promise<{ publicKey: string; privateKey: string }> {
+    const keyPair = await crypto.subtle.generateKey(
+        {
+            name: 'RSA-OAEP',
+            modulusLength: 2048,
+            publicExponent: new Uint8Array([1, 0, 1]),
+            hash: 'SHA-256',
+        },
+        true,
+        ['encrypt', 'decrypt']
+    );
+
+    // Export veřejného klíče
+    const publicKeyBuffer = await crypto.subtle.exportKey('spki', keyPair.publicKey);
+    const publicKey = btoa(String.fromCharCode(...new Uint8Array(publicKeyBuffer)));
+
+    // Export privátního klíče
+    const privateKeyBuffer = await crypto.subtle.exportKey('pkcs8', keyPair.privateKey);
+    const privateKey = btoa(String.fromCharCode(...new Uint8Array(privateKeyBuffer)));
+
+    return { publicKey, privateKey };
+}
+
+/**
+ * Zašifruje privátní klíč pomocí master hesla uživatele
+ */
+export async function encryptPrivateKey(privateKey: string, masterPassword: string, encryptionSalt: string): Promise<{ encryptedPrivateKey: string; iv: string }> {
+    const encryptionKey = await generateEncryptionKey(masterPassword, encryptionSalt);
+    return await encryptData(privateKey, encryptionKey);
+}
+
+/**
+ * Dešifruje privátní klíč pomocí master hesla uživatele
+ */
+export async function decryptPrivateKey(encryptedPrivateKey: string, iv: string, masterPassword: string, encryptionSalt: string): Promise<string> {
+    const encryptionKey = await generateEncryptionKey(masterPassword, encryptionSalt);
+    return await decryptData(encryptedPrivateKey, iv, encryptionKey);
+}
+
+/**
+ * Zašifruje data pomocí veřejného klíče RSA
+ */
+export async function encryptWithPublicKey(data: string, publicKeyBase64: string): Promise<string> {
+    const publicKeyBuffer = Uint8Array.from(atob(publicKeyBase64), c => c.charCodeAt(0));
+    const publicKey = await crypto.subtle.importKey(
+        'spki',
+        publicKeyBuffer,
+        { name: 'RSA-OAEP', hash: 'SHA-256' },
+        false,
+        ['encrypt']
+    );
+
+    const encoder = new TextEncoder();
+    const dataBuffer = encoder.encode(data);
+    
+    const encryptedBuffer = await crypto.subtle.encrypt(
+        { name: 'RSA-OAEP' },
+        publicKey,
+        dataBuffer
+    );
+    
+    return btoa(String.fromCharCode(...new Uint8Array(encryptedBuffer)));
+}
+
+/**
+ * Dešifruje data pomocí privátního klíče RSA
+ */
+export async function decryptWithPrivateKey(encryptedData: string, privateKeyBase64: string): Promise<string> {
+    const privateKeyBuffer = Uint8Array.from(atob(privateKeyBase64), c => c.charCodeAt(0));
+    const privateKey = await crypto.subtle.importKey(
+        'pkcs8',
+        privateKeyBuffer,
+        { name: 'RSA-OAEP', hash: 'SHA-256' },
+        false,
+        ['decrypt']
+    );
+
+    const encryptedBuffer = Uint8Array.from(atob(encryptedData), c => c.charCodeAt(0));
+    
+    const decryptedBuffer = await crypto.subtle.decrypt(
+        { name: 'RSA-OAEP' },
+        privateKey,
+        encryptedBuffer
+    );
+    
+    const decoder = new TextDecoder();
+    return decoder.decode(decryptedBuffer);
+}
+
+/**
+ * Generuje náhodný symetrický klíč pro sdílení
+ */
+export async function generateSharingKey(): Promise<string> {
+    const key = await crypto.subtle.generateKey(
+        { name: 'AES-GCM', length: 256 },
+        true,
+        ['encrypt', 'decrypt']
+    );
+    
+    const keyBuffer = await crypto.subtle.exportKey('raw', key);
+    return btoa(String.fromCharCode(...new Uint8Array(keyBuffer)));
 }

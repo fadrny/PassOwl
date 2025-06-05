@@ -262,6 +262,8 @@ export interface User {
    * @format date-time
    */
   updated_at: string;
+  /** Encrypted Private Key */
+  encrypted_private_key: string;
   /**
    * Roles
    * @default []
@@ -280,9 +282,9 @@ export interface UserCreate {
   /** Encryption Salt */
   encryption_salt: string;
   /** Public Key */
-  public_key?: string | null;
+  public_key: string;
   /** Encrypted Private Key */
-  encrypted_private_key?: string | null;
+  encrypted_private_key: string;
 }
 
 /** UserLogin */

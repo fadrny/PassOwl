@@ -18,8 +18,8 @@ class UserCreate(BaseModel):
     login_password_hash: str
     login_salt: str
     encryption_salt: str
-    public_key: Optional[str] = None
-    encrypted_private_key: Optional[str] = None
+    public_key: str
+    encrypted_private_key: str
 
 
 class UserLogin(BaseModel):
@@ -50,6 +50,7 @@ class User(UserBase):
     avatar_url: Optional[str] = None
     created_at: datetime
     updated_at: datetime
+    encrypted_private_key: str
     roles: List[Role] = []
 
 
