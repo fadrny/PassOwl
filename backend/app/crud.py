@@ -346,14 +346,14 @@ def create_shared_credential(db: Session, shared_credential: schemas.SharedCrede
     db.refresh(db_shared)
     return db_shared
 
-def get_shared_credentials_received(db: Session, user_id: int):
+def get_shared_credentials_received(db: Session, user_id: int, skip: int = 0, limit: int = 100):
     return db.query(database.SharedCredential).join(
         database.Credential, database.SharedCredential.credential_id == database.Credential.id
     ).join(
         database.User, database.SharedCredential.owner_user_id == database.User.id
     ).filter(
         database.SharedCredential.recipient_user_id == user_id
-    ).all()
+    ).offset(skip).limit(limit).all()
 
 def get_shared_credentials_owned(db: Session, user_id: int):
     return db.query(database.SharedCredential).join(
