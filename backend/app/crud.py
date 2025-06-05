@@ -313,15 +313,25 @@ def create_shared_credential(db: Session, shared_credential: schemas.SharedCrede
         and_(database.Credential.id == shared_credential.credential_id, 
              database.Credential.user_id == owner_user_id)
     ).first()
-    
+
     if not credential:
         return None
-    
+
     # Ověř, že příjemce existuje
     recipient = db.query(database.User).filter(database.User.id == shared_credential.recipient_user_id).first()
     if not recipient:
         return None
-    
+
+    # Ověř, že heslo již není sdíleno s tímto uživatelem
+    existing_share = db.query(database.SharedCredential).filter(
+        and_(database.SharedCredential.credential_id == shared_credential.credential_id,
+             database.SharedCredential.owner_user_id == owner_user_id,
+             database.SharedCredential.recipient_user_id == shared_credential.recipient_user_id)
+    ).first()
+
+    if existing_share:
+        return None
+
     db_shared = database.SharedCredential(
         credential_id=shared_credential.credential_id,
         owner_user_id=owner_user_id,
@@ -330,7 +340,7 @@ def create_shared_credential(db: Session, shared_credential: schemas.SharedCrede
         encrypted_shared_data=shared_credential.encrypted_shared_data,
         sharing_iv=shared_credential.sharing_iv
     )
-    
+
     db.add(db_shared)
     db.commit()
     db.refresh(db_shared)
@@ -358,7 +368,7 @@ def delete_shared_credential(db: Session, shared_credential_id: int, user_id: in
         and_(database.SharedCredential.id == shared_credential_id,
              database.SharedCredential.owner_user_id == user_id)
     ).first()
-    
+
     if db_shared:
         db.delete(db_shared)
         db.commit()
@@ -388,3 +398,92 @@ def update_user_keys(db: Session, user_id: int, public_key: str, encrypted_priva
         db.commit()
         db.refresh(db_user)
     return db_user
+
+
+def get_shared_credential_users(db: Session, credential_id: int, owner_user_id: int):
+    """Získá seznam uživatelů, se kterými je sdíleno dané heslo"""
+    # Ověř, že vlastník může vidět toto heslo
+    credential = db.query(database.Credential).filter(
+        and_(database.Credential.id == credential_id, 
+             database.Credential.user_id == owner_user_id)
+    ).first()
+
+    if not credential:
+        return None
+
+    # Získej všechna sdílení pro toto heslo
+    shared_credentials = db.query(database.SharedCredential).filter(
+        and_(database.SharedCredential.credential_id == credential_id,
+             database.SharedCredential.owner_user_id == owner_user_id)
+    ).all()
+
+    result = []
+    for shared in shared_credentials:
+        user = db.query(database.User).filter(database.User.id == shared.recipient_user_id).first()
+        if user:
+            result.append({
+                "id": user.id,
+                "username": user.username,
+                "shared_credential_id": shared.id,
+                "encrypted_sharing_key": shared.encrypted_sharing_key,
+                "encrypted_shared_data": shared.encrypted_shared_data,
+                "sharing_iv": shared.sharing_iv,
+                "created_at": shared.created_at
+            })
+
+    return result
+
+
+def delete_shared_credential_by_ids(db: Session, credential_id: int, recipient_user_id: int, owner_user_id: int):
+    """Smaže sdílení hesla podle ID hesla a ID příjemce"""
+    # Ověř, že vlastník může smazat toto sdílení
+    credential = db.query(database.Credential).filter(
+        and_(database.Credential.id == credential_id, 
+             database.Credential.user_id == owner_user_id)
+    ).first()
+
+    if not credential:
+        return False
+
+    # Najdi sdílení podle ID hesla a ID příjemce
+    db_shared = db.query(database.SharedCredential).filter(
+        and_(database.SharedCredential.credential_id == credential_id,
+             database.SharedCredential.recipient_user_id == recipient_user_id,
+             database.SharedCredential.owner_user_id == owner_user_id)
+    ).first()
+
+    if db_shared:
+        db.delete(db_shared)
+        db.commit()
+        return True
+    return False
+
+
+def update_shared_credential(db: Session, credential_id: int, recipient_user_id: int, owner_user_id: int, 
+                            shared_credential: schemas.SharedCredentialUpdate):
+    """Aktualizuje sdílené heslo"""
+    # Ověř, že vlastník může aktualizovat toto sdílení
+    credential = db.query(database.Credential).filter(
+        and_(database.Credential.id == credential_id, 
+             database.Credential.user_id == owner_user_id)
+    ).first()
+
+    if not credential:
+        return None
+
+    # Najdi sdílení podle ID hesla a ID příjemce
+    db_shared = db.query(database.SharedCredential).filter(
+        and_(database.SharedCredential.credential_id == credential_id,
+             database.SharedCredential.recipient_user_id == recipient_user_id,
+             database.SharedCredential.owner_user_id == owner_user_id)
+    ).first()
+
+    if db_shared:
+        db_shared.encrypted_sharing_key = shared_credential.encrypted_sharing_key
+        db_shared.encrypted_shared_data = shared_credential.encrypted_shared_data
+        db_shared.sharing_iv = shared_credential.sharing_iv
+
+        db.commit()
+        db.refresh(db_shared)
+        return db_shared
+    return None

@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import and_
 from typing import List
-from .. import crud, schemas, auth
+from .. import crud, schemas, auth, database
 from ..database import get_db
 
 router = APIRouter(
@@ -16,17 +17,33 @@ def share_credential(
     current_user: schemas.User = Depends(auth.get_current_user)
 ):
     """Sdílení hesla s jiným uživatelem"""
+    # Check if credential already exists in crud.py
     db_shared = crud.create_shared_credential(db, shared_credential, current_user.id)
     if not db_shared:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot share this credential"
-        )
-    
+        # Check if it's because the credential is already shared
+        existing_share = db.query(database.SharedCredential).filter(
+            and_(
+                database.SharedCredential.credential_id == shared_credential.credential_id,
+                database.SharedCredential.owner_user_id == current_user.id,
+                database.SharedCredential.recipient_user_id == shared_credential.recipient_user_id
+            )
+        ).first()
+
+        if existing_share:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="This credential is already shared with this user"
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot share this credential"
+            )
+
     # Připoj dodatečné informace pro response
     credential = crud.get_credential(db, db_shared.credential_id, current_user.id)
     owner = crud.get_user(db, db_shared.owner_user_id)
-    
+
     response_data = schemas.SharedCredentialResponse(
         id=db_shared.id,
         credential_id=db_shared.credential_id,
@@ -39,7 +56,7 @@ def share_credential(
         credential_title=credential.title if credential else "",
         owner_username=owner.username if owner else ""
     )
-    
+
     return response_data
 
 @router.get("/received", response_model=List[schemas.SharedCredentialResponse])
@@ -49,12 +66,12 @@ def get_received_shared_credentials(
 ):
     """Získání hesel sdílených s aktuálním uživatelem"""
     shared_credentials = crud.get_shared_credentials_received(db, current_user.id)
-    
+
     response_list = []
     for shared in shared_credentials:
         credential = crud.get_credential(db, shared.credential_id, shared.owner_user_id)
         owner = crud.get_user(db, shared.owner_user_id)
-        
+
         response_list.append(schemas.SharedCredentialResponse(
             id=shared.id,
             credential_id=shared.credential_id,
@@ -67,7 +84,7 @@ def get_received_shared_credentials(
             credential_title=credential.title if credential else "",
             owner_username=owner.username if owner else ""
         ))
-    
+
     return response_list
 
 @router.get("/owned", response_model=List[schemas.SharedCredentialResponse])
@@ -77,12 +94,12 @@ def get_owned_shared_credentials(
 ):
     """Získání hesel, která aktuální uživatel sdílí"""
     shared_credentials = crud.get_shared_credentials_owned(db, current_user.id)
-    
+
     response_list = []
     for shared in shared_credentials:
         credential = crud.get_credential(db, shared.credential_id, current_user.id)
         recipient = crud.get_user(db, shared.recipient_user_id)
-        
+
         response_list.append(schemas.SharedCredentialResponse(
             id=shared.id,
             credential_id=shared.credential_id,
@@ -95,7 +112,7 @@ def get_owned_shared_credentials(
             credential_title=credential.title if credential else "",
             owner_username=recipient.username if recipient else ""
         ))
-    
+
     return response_list
 
 @router.delete("/{shared_credential_id}")
@@ -137,6 +154,75 @@ def search_users(
     """Vyhledání uživatelů pro sdílení"""
     if len(q) < 2:
         return []
-    
+
     users = crud.search_users_by_username(db, q, current_user.id)
     return [{"id": user.id, "username": user.username} for user in users]
+
+
+@router.get("/credential/{credential_id}/users", response_model=List[schemas.SharedUserResponse])
+def get_credential_shared_users(
+    credential_id: int,
+    db: Session = Depends(get_db),
+    current_user: schemas.User = Depends(auth.get_current_user)
+):
+    """Získání seznamu uživatelů, se kterými je sdíleno dané heslo"""
+    users = crud.get_shared_credential_users(db, credential_id, current_user.id)
+    if users is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Credential not found or you don't have permission to access it"
+        )
+    return users
+
+
+@router.delete("/credential/{credential_id}/user/{user_id}")
+def delete_credential_sharing(
+    credential_id: int,
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: schemas.User = Depends(auth.get_current_user)
+):
+    """Zrušení sdílení hesla s konkrétním uživatelem"""
+    success = crud.delete_shared_credential_by_ids(db, credential_id, user_id, current_user.id)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Shared credential not found or you don't have permission to delete it"
+        )
+    return {"message": "Shared credential deleted successfully"}
+
+
+@router.put("/credential/{credential_id}/user/{user_id}", response_model=schemas.SharedCredentialResponse)
+def update_credential_sharing(
+    credential_id: int,
+    user_id: int,
+    shared_credential: schemas.SharedCredentialUpdate,
+    db: Session = Depends(get_db),
+    current_user: schemas.User = Depends(auth.get_current_user)
+):
+    """Aktualizace sdíleného hesla"""
+    updated_shared = crud.update_shared_credential(db, credential_id, user_id, current_user.id, shared_credential)
+    if not updated_shared:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Shared credential not found or you don't have permission to update it"
+        )
+
+    # Připoj dodatečné informace pro response
+    credential = crud.get_credential(db, updated_shared.credential_id, current_user.id)
+    recipient = crud.get_user(db, updated_shared.recipient_user_id)
+
+    response_data = schemas.SharedCredentialResponse(
+        id=updated_shared.id,
+        credential_id=updated_shared.credential_id,
+        owner_user_id=updated_shared.owner_user_id,
+        recipient_user_id=updated_shared.recipient_user_id,
+        encrypted_sharing_key=updated_shared.encrypted_sharing_key,
+        encrypted_shared_data=updated_shared.encrypted_shared_data,
+        sharing_iv=updated_shared.sharing_iv,
+        created_at=updated_shared.created_at,
+        credential_title=credential.title if credential else "",
+        owner_username=recipient.username if recipient else ""
+    )
+
+    return response_data

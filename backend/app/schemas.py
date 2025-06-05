@@ -204,3 +204,24 @@ class UserPublicKey(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# Schéma pro aktualizaci sdíleného hesla
+class SharedCredentialUpdate(BaseModel):
+    encrypted_sharing_key: str
+    encrypted_shared_data: str
+    sharing_iv: str
+
+
+# Schéma pro uživatele se kterým je sdíleno heslo
+class SharedUserResponse(BaseModel):
+    id: int
+    username: str
+    shared_credential_id: int
+    encrypted_sharing_key: str
+    encrypted_shared_data: str
+    sharing_iv: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True

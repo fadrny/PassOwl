@@ -11,7 +11,8 @@ import { encryptionKeyManager } from './encryption-key-manager';
 import type { 
     SharedCredentialCreate, 
     SharedCredentialResponse, 
-    UserPublicKey 
+    UserPublicKey,
+    SharedUserResponse 
 } from './api';
 import type { ApiResponse } from '$lib/types/api';
 
@@ -99,6 +100,40 @@ export class SharingManager {
             return {
                 error: {
                     detail: error.error?.detail || error.message || 'Nepodařilo se sdílet heslo',
+                    status: error.status || 500
+                }
+            };
+        }
+    }
+
+    /**
+     * Získání seznamu uživatelů, se kterými je sdíleno konkrétní heslo
+     */
+    static async getCredentialSharedUsers(credentialId: number): Promise<ApiResponse<SharedUserResponse[]>> {
+        try {
+            const response = await api.api.getCredentialSharedUsersApiSharingCredentialCredentialIdUsersGet(credentialId);
+            return { data: response.data };
+        } catch (error: any) {
+            return {
+                error: {
+                    detail: error.error?.detail || error.message || 'Nepodařilo se načíst sdílené uživatele',
+                    status: error.status || 500
+                }
+            };
+        }
+    }
+
+    /**
+     * Zrušení sdílení hesla s konkrétním uživatelem
+     */
+    static async removeCredentialSharing(credentialId: number, userId: number): Promise<ApiResponse<void>> {
+        try {
+            await api.api.deleteCredentialSharingApiSharingCredentialCredentialIdUserUserIdDelete(credentialId, userId);
+            return { data: undefined };
+        } catch (error: any) {
+            return {
+                error: {
+                    detail: error.error?.detail || error.message || 'Nepodařilo se zrušit sdílení',
                     status: error.status || 500
                 }
             };
