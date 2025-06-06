@@ -1,6 +1,7 @@
 <script lang="ts">
     import Button from '../ui/Button.svelte';
     import type { PasswordCategory } from '$lib/services/api';
+    import MdLink from 'svelte-icons/md/MdLink.svelte';
 
     export interface TransformedPassword {
         id: string;
@@ -243,9 +244,7 @@
                                         >
                                             {password.name}
                                         </button>
-                                        <svg class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-2M18 6h-6v6m0 0l6-6" />
-                                        </svg>
+                                        <div class="icon-sm-lblue"><MdLink/></div>
                                     {:else}
                                         <span class="text-sm font-medium text-gray-900">
                                             {password.name}

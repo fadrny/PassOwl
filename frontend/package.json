@@ -33,6 +33,7 @@
 		"prettier-plugin-tailwindcss": "^0.6.11",
 		"svelte": "^5.0.0",
 		"svelte-check": "^4.0.0",
+		"svelte-icons": "^2.1.0",
 		"swagger-typescript-api": "^13.1.0",
 		"tailwindcss": "^4.1.0",
 		"typescript": "^5.0.0",

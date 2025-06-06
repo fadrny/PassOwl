@@ -1,6 +1,6 @@
-<svelte:head>
-    <title>PassOwl - Správa hesel</title>
-</svelte:head>
+<script lang="ts">
+    import MdArrowForward from 'svelte-icons/md/MdArrowForward.svelte'
+</script>
 
 <!-- Úvodní stránka pro nepřihlášené uživatele -->
 <div class="text-center">
@@ -18,7 +18,7 @@
             Přihlásit se
         </a>
         <a href="/register" class="text-sm/6 font-semibold text-gray-900">
-            Registrovat se<span aria-hidden="true">→</span>
+            Registrovat se<span aria-hidden="true"><div class="icon-sm-black"><MdArrowForward/></div></span>
         </a>
     </div>
 </div>

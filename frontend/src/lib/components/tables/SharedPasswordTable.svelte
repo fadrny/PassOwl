@@ -3,6 +3,7 @@
     import Button from '../ui/Button.svelte';
     import type { SharedCredentialResponse } from '$lib/services/api';
     import type { DecryptedSharedPassword } from '$lib/services/sharing-manager';
+    import MdLink from 'svelte-icons/md/MdLink.svelte'
 
     interface Props {
         sharedPasswords: SharedCredentialResponse[];
@@ -129,9 +130,7 @@
                                         >
                                             {sharedPassword.credential_title}
                                         </button>
-                                        <svg class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-2M18 6h-6v6m0 0l6-6" />
-                                        </svg>
+                                        <div class="icon-sm-lblue"><MdLink/></div>
                                     {:else}
                                         <span class="text-sm font-medium text-gray-900">
                                             {sharedPassword.credential_title}
@@ -152,6 +151,7 @@
                                         onclick={() => copyToClipboard(sharedPassword.credential_username)}
                                         class="text-gray-400 hover:text-gray-600"
                                         title="Kopírovat uživatelské jméno"
+                                        aria-label="Kopírovat uživatelské jméno"
                                     >
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -168,6 +168,7 @@
                                             onclick={() => copyToClipboard(decrypted.password)}
                                             class="text-gray-400 hover:text-gray-600"
                                             title="Kopírovat heslo"
+                                            aria-label="Kopírovat heslo"
                                         >
                                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />

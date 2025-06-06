@@ -2,6 +2,8 @@
     import { AuthStore, authUser } from '$lib/stores/auth';
     import { goto } from '$app/navigation';
     import AvatarUploadModal from '../modals/AvatarUploadModal.svelte';
+    import MdHighlightOff from 'svelte-icons/md/MdHighlightOff.svelte'
+    import MdPhotoFilter from 'svelte-icons/md/MdPhotoFilter.svelte'
 
     let showDropdown = $state(false);
     let showAvatarModal = $state(false);
@@ -94,18 +96,14 @@
                                 onclick={openAvatarModal}
                                 class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
                             >
-                                <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                </svg>
-                                Změnit profilový obrázek
+                                <div class="icon-profile"><MdPhotoFilter/></div>
+                                Změnit obrázek
                             </button>
                             <button
                                 onclick={handleLogout}
                                 class="flex items-center w-full px-4 py-2 text-sm text-red-700 hover:bg-red-50 transition-colors duration-150"
                             >
-                                <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                                </svg>
+                                <div class="icon-logout"><MdHighlightOff/></div>
                                 Odhlásit se
                             </button>
                         </div>
