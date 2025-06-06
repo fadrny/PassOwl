@@ -1,3 +1,4 @@
+<!-- filepath: d:\01sl\skolka\PassOwl\frontend\src\lib\components\tables\SharedPasswordTable.svelte -->
 <script lang="ts">
     import Button from '../ui/Button.svelte';
     import type { SharedCredentialResponse } from '$lib/services/api';
@@ -6,23 +7,21 @@
     interface Props {
         sharedPasswords: SharedCredentialResponse[];
         decryptedSharedPasswords: Map<number, DecryptedSharedPassword>;
-        // Pagination props
-        currentPage?: number;
-        totalPages?: number;
-        totalCount?: number;
-        loading?: boolean;
-        // Event handlers
-        onDecrypt: (id: number) => void;
+        currentPage: number;
+        totalPages: number;
+        totalCount: number;
+        loading: boolean;
+        onDecrypt?: (id: number) => void;
         onPageChange?: (page: number) => void;
     }
 
     let { 
         sharedPasswords, 
-        decryptedSharedPasswords, 
-        currentPage = 1,
-        totalPages = 1,
-        totalCount = 0,
-        loading = false,
+        decryptedSharedPasswords,
+        currentPage,
+        totalPages,
+        totalCount,
+        loading,
         onDecrypt,
         onPageChange
     }: Props = $props();
@@ -39,11 +38,13 @@
         return new Date(dateString).toLocaleDateString('cs-CZ');
     }
 
+    function openUrl(url: string) {
+        window.open(url, '_blank', 'noopener,noreferrer');
+    }
+
     // Stav pro sledování, které heslo je dešifrované
     const decryptedPasswordIds = $derived(
-        new Set(
-            Array.from(decryptedSharedPasswords.keys())
-        )
+        new Set(Array.from(decryptedSharedPasswords.keys()))
     );
 
     // Pagination helpers
@@ -99,65 +100,69 @@
                             Název
                         </th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Vlastník
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Uživatelské jméno
                         </th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Heslo
                         </th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Sdíleno
+                            Vlastník
                         </th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Akce
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Sdíleno
                         </th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
-                    {#each sharedPasswords as sharedPassword}
-                        {@const decrypted = decryptedSharedPasswords.get(sharedPassword.id)}
+                    {#each sharedPasswords as sharedPassword (sharedPassword.id)}
                         {@const isDecrypted = decryptedPasswordIds.has(sharedPassword.id)}
+                        {@const decrypted = decryptedSharedPasswords.get(sharedPassword.id)}
                         <tr class="hover:bg-gray-50">
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm font-medium text-gray-900">
-                                    {decrypted?.title || sharedPassword.credential_title}
-                                </div>
-                                {#if decrypted?.url}
-                                    <div class="text-sm text-gray-500">
-                                        <a href={decrypted.url} target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800">
-                                            {decrypted.url}
-                                        </a>
-                                    </div>
-                                {/if}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {sharedPassword.owner_username}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {#if decrypted}
-                                    <div class="flex items-center gap-2">
-                                        <span class="font-mono">{decrypted.username}</span>
+                                <div class="flex items-center gap-1">
+                                    {#if sharedPassword.credential_url}
                                         <button
                                             type="button"
-                                            onclick={() => copyToClipboard(decrypted.username)}
-                                            class="text-gray-400 hover:text-gray-600"
-                                            title="Kopírovat uživatelské jméno"
+                                            onclick={() => openUrl(sharedPassword.credential_url!)}
+                                            class="text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer"
+                                            title="Otevřít URL"
                                         >
-                                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                            </svg>
+                                            {sharedPassword.credential_title}
                                         </button>
+                                        <svg class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-2M18 6h-6v6m0 0l6-6" />
+                                        </svg>
+                                    {:else}
+                                        <span class="text-sm font-medium text-gray-900">
+                                            {sharedPassword.credential_title}
+                                        </span>
+                                    {/if}
+                                </div>
+                                {#if sharedPassword.credential_url}
+                                    <div class="text-sm text-gray-500 truncate max-w-xs">
+                                        {sharedPassword.credential_url}
                                     </div>
-                                {:else}
-                                    <span class="text-gray-400">•••••••••</span>
                                 {/if}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {#if decrypted}
+                                <div class="flex items-center gap-2">
+                                    <span class="font-mono">{sharedPassword.credential_username}</span>
+                                    <button
+                                        type="button"
+                                        onclick={() => copyToClipboard(sharedPassword.credential_username)}
+                                        class="text-gray-400 hover:text-gray-600"
+                                        title="Kopírovat uživatelské jméno"
+                                    >
+                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {#if isDecrypted && decrypted}
                                     <div class="flex items-center gap-2">
-                                        <span class="font-mono">••••••••••</span>
+                                        <span class="font-mono bg-gray-100 px-2 py-1 rounded text-sm">{decrypted.password}</span>
                                         <button
                                             type="button"
                                             onclick={() => copyToClipboard(decrypted.password)}
@@ -171,28 +176,29 @@
                                         <Button
                                             variant="secondary"
                                             size="sm"
-                                            onclick={() => onDecrypt(sharedPassword.id)}
+                                            onclick={() => onDecrypt?.(sharedPassword.id)}
                                         >
                                             Skrýt
                                         </Button>
                                     </div>
                                 {:else}
-                                    <span class="text-gray-400">•••••••••</span>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-gray-400 font-mono">•••••••••</span>
+                                        <Button
+                                            variant="secondary"
+                                            size="sm"
+                                            onclick={() => onDecrypt?.(sharedPassword.id)}
+                                        >
+                                            Zobrazit
+                                        </Button>
+                                    </div>
                                 {/if}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                <span class="font-medium">{sharedPassword.owner_username}</span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 {formatDate(sharedPassword.created_at)}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                {#if !isDecrypted}
-                                    <Button
-                                        variant="secondary"
-                                        size="sm"
-                                        onclick={() => onDecrypt(sharedPassword.id)}
-                                    >
-                                        Zobrazit
-                                    </Button>
-                                {/if}
                             </td>
                         </tr>
                     {/each}

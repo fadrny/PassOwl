@@ -106,6 +106,10 @@
         }
     }
 
+    function openUrl(url: string) {
+        window.open(url, '_blank', 'noopener,noreferrer');
+    }
+
 </script>
 
 <div class="bg-white shadow overflow-hidden sm:rounded-md">
@@ -229,19 +233,28 @@
                     {#each passwords as password (password.id)}
                         <tr class="hover:bg-gray-50">
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm font-medium text-gray-900">
-                                    {password.name}
+                                <div class="flex items-center gap-1">
+                                    {#if password.url}
+                                        <button
+                                            type="button"
+                                            onclick={() => openUrl(password.url!)}
+                                            class="text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer"
+                                            title="Otevřít URL"
+                                        >
+                                            {password.name}
+                                        </button>
+                                        <svg class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-2M18 6h-6v6m0 0l6-6" />
+                                        </svg>
+                                    {:else}
+                                        <span class="text-sm font-medium text-gray-900">
+                                            {password.name}
+                                        </span>
+                                    {/if}
                                 </div>
                                 {#if password.url}
-                                    <div class="text-sm text-gray-500">
-                                        <a
-                                            href={password.url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            class="text-blue-600 hover:text-blue-800"
-                                        >
-                                            {password.url}
-                                        </a>
+                                    <div class="text-sm text-gray-500 truncate max-w-xs">
+                                        {password.url}
                                     </div>
                                 {/if}
                             </td>
@@ -269,7 +282,7 @@
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                 {#if decryptedPasswordIds.has(password.id)}
                                     <div class="flex items-center gap-2">
-                                        <span class="font-mono">••••••••••</span>
+                                        <span class="font-mono bg-gray-100 px-2 py-1 rounded text-sm">{password.decryptedPassword}</span>
                                         <button
                                             type="button"
                                             onclick={() => copyToClipboard(password.decryptedPassword!)}
