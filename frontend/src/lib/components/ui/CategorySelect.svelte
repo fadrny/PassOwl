@@ -44,9 +44,8 @@
     function toggleCategory(categoryId: number) {
         if (disabled) return;
 
-        const newSelectedIds = selectedIds.includes(categoryId)
-            ? selectedIds.filter(id => id !== categoryId)
-            : [...selectedIds, categoryId];
+        const isCurrentlySelected = selectedIds.includes(categoryId);
+        const newSelectedIds = isCurrentlySelected ? [] : [categoryId];
 
         onSelectionChange?.(newSelectedIds);
     }

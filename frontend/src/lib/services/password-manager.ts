@@ -179,7 +179,7 @@ export class PasswordManager {
   }
 
   /**
-   * Aktualizace hesla (podle API specifikace)
+   * Aktualizace hesla s podporou pro aktualizaci sdílení
    */
   static async updatePassword(id: number, passwordData: PasswordUpdateData): Promise<ApiResponse<Credential>> {
     try {
@@ -199,6 +199,9 @@ export class PasswordManager {
       }
 
       const response = await api.credentials.updateCredentialCredentialsCredentialIdPut(id, credentialUpdate);
+      
+      console.log(`Heslo ${id} úspěšně aktualizováno${passwordData.password ? ' (včetně změny hesla)' : ''}`);
+      
       return { data: response.data };
     } catch (error: any) {
       return {

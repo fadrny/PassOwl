@@ -3,7 +3,7 @@ import { encryptData, decryptData, encryptWithPublicKey, decryptWithPrivateKey, 
 import { PasswordManager } from './password-manager';
 import { KeyManager } from './key-manager';
 import { encryptionKeyManager } from './encryption-key-manager';
-import type { SharedCredentialResponse, SharedCredentialCreate, SharedUserResponse } from './api';
+import type { SharedCredentialResponse, SharedCredentialCreate, SharedUserResponse, SharedCredentialUpdate } from './api';
 import type { ApiResponse } from '$lib/types/api';
 
 /**
@@ -247,6 +247,67 @@ export class SharingManager {
             return {
                 error: {
                     detail: error.error?.detail || error.message || 'Nepodařilo se zrušit sdílení',
+                    status: error.status || 500
+                }
+            };
+        }
+    }
+
+    /**
+     * NOVÁ METODA: Aktualizace sdíleného hesla po změně původního hesla
+     */
+    static async updateSharedPassword(credentialId: number, recipientUserId: number): Promise<ApiResponse<SharedCredentialResponse>> {
+        try {
+            console.log(`Aktualizuji sdílení hesla ${credentialId} pro uživatele ${recipientUserId}`);
+
+            // 1. Dešifrovat aktuální heslo
+            const credentialResponse = await api.credentials.getCredentialCredentialsCredentialIdGet(credentialId);
+            const credential = credentialResponse.data;
+            
+            const decryptedPassword = await PasswordManager.decryptPassword(credential);
+            if (decryptedPassword.error || !decryptedPassword.data) {
+                return { error: { detail: 'Nepodařilo se dešifrovat aktualizované heslo', status: 500 } };
+            }
+
+            // 2. Získat veřejný klíč příjemce
+            const publicKeyResponse = await api.api.getUserPublicKeyApiSharingUsersUserIdPublicKeyGet(recipientUserId);
+            const recipientPublicKey = publicKeyResponse.data.public_key;
+
+            // 3. Vytvořit nový sharing_key
+            const sharingKey = await generateSharingKey();
+
+            // 4. Zašifrovat POUZE nové heslo pomocí sharing_key
+            const newPasswordToShare = decryptedPassword.data.password;
+
+            const { encryptedData: encryptedSharedData, iv: sharingIv } = await encryptData(
+                newPasswordToShare, 
+                sharingKey
+            );
+
+            // 5. Zašifrovat sharing_key veřejným klíčem příjemce
+            const encryptedSharingKey = await encryptWithPublicKey(sharingKey, recipientPublicKey);
+
+            // 6. Aktualizovat sdílení na serveru
+            const updateRequest: SharedCredentialUpdate = {
+                encrypted_sharing_key: encryptedSharingKey,
+                encrypted_shared_data: encryptedSharedData,
+                sharing_iv: sharingIv
+            };
+
+            const response = await api.api.updateCredentialSharingApiSharingCredentialCredentialIdUserUserIdPut(
+                credentialId, 
+                recipientUserId, 
+                updateRequest
+            );
+
+            console.log(`Sdílení pro uživatele ${recipientUserId} úspěšně aktualizováno`);
+            return { data: response.data };
+
+        } catch (error: any) {
+            console.error(`Chyba při aktualizaci sdílení pro uživatele ${recipientUserId}:`, error);
+            return {
+                error: {
+                    detail: error.error?.detail || error.message || 'Nepodařilo se aktualizovat sdílené heslo',
                     status: error.status || 500
                 }
             };
