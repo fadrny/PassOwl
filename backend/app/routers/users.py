@@ -22,9 +22,9 @@ def update_user_avatar(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Avatar URL is required"
         )
-    
+
     updated_user = crud.update_user_avatar(db, current_user.id, user_update.avatar_url)
-    
+
     # Log avatar update
     crud.create_audit_log(
         db=db,
@@ -33,7 +33,7 @@ def update_user_avatar(
         resource_type="user",
         resource_id=str(current_user.id)
     )
-    
+
     return updated_user
 
 @router.put("/keys")
@@ -51,3 +51,33 @@ def update_user_keys(
             detail="User not found"
         )
     return {"message": "Keys updated successfully"}
+
+
+@router.get("/me/stats", response_model=schemas.UserStats)
+def get_current_user_stats(
+    db: Session = Depends(database.get_db),
+    current_user: database.User = Depends(auth.get_current_user)
+):
+    """Získá statistiky pro aktuálního uživatele"""
+    # Get count of user's own credentials
+    credentials = crud.get_credentials(db, current_user.id)
+    own_credentials_count = credentials["total"]
+
+    # Get count of credentials shared with the user
+    shared_credentials = crud.get_shared_credentials_received(db, current_user.id)
+    shared_credentials_count = shared_credentials["total"]
+
+    # Get count of secure notes
+    secure_notes = crud.get_secure_notes(db, current_user.id)
+    secure_notes_count = secure_notes["total"]
+
+    # Get count of categories
+    categories = crud.get_categories(db, current_user.id)
+    categories_count = len(categories)
+
+    return schemas.UserStats(
+        own_credentials_count=own_credentials_count,
+        shared_credentials_count=shared_credentials_count,
+        secure_notes_count=secure_notes_count,
+        categories_count=categories_count
+    )

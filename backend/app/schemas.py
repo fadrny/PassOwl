@@ -243,3 +243,11 @@ class SharedCredentialListResponse(BaseModel):
 class SecureNoteListResponse(BaseModel):
     items: List[SecureNote]
     total: int
+
+
+# User stats schema
+class UserStats(BaseModel):
+    own_credentials_count: int
+    shared_credentials_count: int
+    secure_notes_count: int
+    categories_count: int

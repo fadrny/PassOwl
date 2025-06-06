@@ -372,6 +372,18 @@ export interface UserSalts {
   encryption_salt: string;
 }
 
+/** UserStats */
+export interface UserStats {
+  /** Own Credentials Count */
+  own_credentials_count: number;
+  /** Shared Credentials Count */
+  shared_credentials_count: number;
+  /** Secure Notes Count */
+  secure_notes_count: number;
+  /** Categories Count */
+  categories_count: number;
+}
+
 /** UserUpdate */
 export interface UserUpdate {
   /** Avatar Url */
@@ -783,6 +795,24 @@ export class Api<
         path: `/users/keys`,
         method: "PUT",
         query: query,
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Získá statistiky pro aktuálního uživatele
+     *
+     * @tags users
+     * @name GetCurrentUserStatsUsersMeStatsGet
+     * @summary Get Current User Stats
+     * @request GET:/users/me/stats
+     * @secure
+     */
+    getCurrentUserStatsUsersMeStatsGet: (params: RequestParams = {}) =>
+      this.request<UserStats, any>({
+        path: `/users/me/stats`,
+        method: "GET",
         secure: true,
         format: "json",
         ...params,
