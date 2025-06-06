@@ -1,7 +1,6 @@
 import { api } from './api-client';
 import { encryptData, decryptData, encryptWithPublicKey, decryptWithPrivateKey, generateSharingKey } from './crypto';
 import { PasswordManager } from './password-manager';
-import { KeyManager } from './key-manager';
 import { encryptionKeyManager } from './encryption-key-manager';
 import type { SharedCredentialResponse, SharedCredentialCreate, SharedUserResponse, SharedCredentialUpdate } from './api';
 import type { ApiResponse } from '$lib/types/api';
@@ -224,8 +223,8 @@ export class SharingManager {
      */
     static async searchUsers(query: string): Promise<ApiResponse<Array<{ id: number; username: string }>>> {
         try {
-            const result = await KeyManager.searchUsers(query);
-            return result;
+            const response = await api.api.searchUsersApiSharingUsersSearchGet({ q: query });
+            return { data: response.data };
         } catch (error: any) {
             return {
                 error: {

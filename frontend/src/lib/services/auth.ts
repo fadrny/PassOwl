@@ -2,12 +2,10 @@ import { api } from './api-client';
 import { 
     generateSalt, 
     generateLoginHash, 
-    generateEncryptionKey,
     generateRSAKeyPair,
     encryptPrivateKey
 } from './crypto';
 import { encryptionKeyManager } from './encryption-key-manager';
-import { KeyManager } from './key-manager';
 import type { 
     UserCreate, 
     UserLogin, 
