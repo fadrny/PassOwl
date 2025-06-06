@@ -81,17 +81,15 @@
     <title>Dashboard - PassOwl</title>
 </svelte:head>
 
-<div class="min-h-screen bg-gray-50">
-    <Navigation />
-    
-    <main class="mx-auto max-w-7xl py-6 sm:px-6 lg:px-8">
-        <div class="px-4 py-6 sm:px-0">
-            {#key childrenKey}
-                {@render children()}
-            {/key}
-        </div>
-    </main>
-</div>
+<Navigation />
+
+<main class="mx-auto max-w-7xl py-6 sm:px-6 lg:px-8">
+    <div class="px-4 py-6 sm:px-0">
+        {#key childrenKey}
+            {@render children()}
+        {/key}
+    </div>
+</main>
 
 <!-- Re-auth modal -->
 <ReauthModal 

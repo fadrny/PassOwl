@@ -188,8 +188,10 @@ class SharedCredentialResponse(BaseModel):
     sharing_iv: str
     created_at: datetime
 
-    # Informace o původním heslu (title pro zobrazení)
+    # Informace o původním heslu (nešifrované údaje z původního hesla)
     credential_title: str
+    credential_url: Optional[str] = None
+    credential_username: str
     owner_username: str
 
     class Config:
@@ -241,3 +243,11 @@ class SharedCredentialListResponse(BaseModel):
 class SecureNoteListResponse(BaseModel):
     items: List[SecureNote]
     total: int
+
+
+# User stats schema
+class UserStats(BaseModel):
+    own_credentials_count: int
+    shared_credentials_count: int
+    secure_notes_count: int
+    categories_count: int

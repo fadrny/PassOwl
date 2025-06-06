@@ -170,6 +170,13 @@ def delete_credential(db: Session, credential_id: int, user_id: int):
     ).first()
 
     if db_credential:
+        # First delete all shared instances of this credential
+        db.query(database.SharedCredential).filter(
+            and_(database.SharedCredential.credential_id == credential_id,
+                 database.SharedCredential.owner_user_id == user_id)
+        ).delete()
+
+        # Then delete the credential itself
         db.delete(db_credential)
         db.commit()
         return True

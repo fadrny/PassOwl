@@ -1,6 +1,7 @@
 <script lang="ts">
     import Button from '../ui/Button.svelte';
     import type { PasswordCategory } from '$lib/services/api';
+    import MdLink from 'svelte-icons/md/MdLink.svelte';
 
     export interface TransformedPassword {
         id: string;
@@ -104,6 +105,10 @@
         if (page >= 1 && page <= totalPages) {
             onPageChange?.(page);
         }
+    }
+
+    function openUrl(url: string) {
+        window.open(url, '_blank', 'noopener,noreferrer');
     }
 
 </script>
@@ -229,19 +234,26 @@
                     {#each passwords as password (password.id)}
                         <tr class="hover:bg-gray-50">
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm font-medium text-gray-900">
-                                    {password.name}
+                                <div class="flex items-center gap-1">
+                                    {#if password.url}
+                                        <button
+                                            type="button"
+                                            onclick={() => openUrl(password.url!)}
+                                            class="text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer"
+                                            title="Otevřít URL"
+                                        >
+                                            {password.name}
+                                        </button>
+                                        <div class="icon-sm-lblue"><MdLink/></div>
+                                    {:else}
+                                        <span class="text-sm font-medium text-gray-900">
+                                            {password.name}
+                                        </span>
+                                    {/if}
                                 </div>
                                 {#if password.url}
-                                    <div class="text-sm text-gray-500">
-                                        <a
-                                            href={password.url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            class="text-blue-600 hover:text-blue-800"
-                                        >
-                                            {password.url}
-                                        </a>
+                                    <div class="text-sm text-gray-500 truncate max-w-xs">
+                                        {password.url}
                                     </div>
                                 {/if}
                             </td>
@@ -269,7 +281,7 @@
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                 {#if decryptedPasswordIds.has(password.id)}
                                     <div class="flex items-center gap-2">
-                                        <span class="font-mono">••••••••••</span>
+                                        <span class="font-mono bg-gray-100 px-2 py-1 rounded text-sm">{password.decryptedPassword}</span>
                                         <button
                                             type="button"
                                             onclick={() => copyToClipboard(password.decryptedPassword!)}

@@ -2,7 +2,7 @@
     import { onMount } from 'svelte';
     import { PasswordManager, type PasswordUpdateData } from '$lib/services/password-manager';
     import { CategoryManager } from '$lib/services/category-manager';
-    import type { Credential, PasswordCategory } from '$lib/services/api';
+    import type { Credential, PasswordCategory, SharedCredentialResponse } from '$lib/services/api';
     import PasswordTable from '$lib/components/tables/PasswordTable.svelte';
     import SharedPasswordTable from '$lib/components/tables/SharedPasswordTable.svelte';
     import PageHeader from '$lib/components/layout/PageHeader.svelte';
@@ -11,7 +11,7 @@
     import EditPasswordModal from '$lib/components/modals/EditPasswordModal.svelte';
     import SharePasswordModal from '$lib/components/modals/SharePasswordModal.svelte';
     import { SharingManager } from '$lib/services/sharing-manager';
-    import type { SharedCredentialResponse, DecryptedSharedPassword } from '$lib/services/sharing-manager';
+    import type { DecryptedSharedPassword } from '$lib/services/sharing-manager';
 
     let passwords: Credential[] = $state([]);
     let categories: PasswordCategory[] = $state([]);
@@ -252,7 +252,7 @@
             editingPasswordData = {
                 title: password.title,
                 username: password.username,
-                password: '', // Bude potřeba dešifrovat - uživatel může změnit
+                password: '',
                 url: password.url,
                 categoryIds: password.categories?.map(c => c.id) || []
             };

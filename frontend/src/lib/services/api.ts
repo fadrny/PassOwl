@@ -256,6 +256,10 @@ export interface SharedCredentialResponse {
   created_at: string;
   /** Credential Title */
   credential_title: string;
+  /** Credential Url */
+  credential_url?: string | null;
+  /** Credential Username */
+  credential_username: string;
   /** Owner Username */
   owner_username: string;
 }
@@ -366,6 +370,18 @@ export interface UserSalts {
   login_salt: string;
   /** Encryption Salt */
   encryption_salt: string;
+}
+
+/** UserStats */
+export interface UserStats {
+  /** Own Credentials Count */
+  own_credentials_count: number;
+  /** Shared Credentials Count */
+  shared_credentials_count: number;
+  /** Secure Notes Count */
+  secure_notes_count: number;
+  /** Categories Count */
+  categories_count: number;
 }
 
 /** UserUpdate */
@@ -779,6 +795,24 @@ export class Api<
         path: `/users/keys`,
         method: "PUT",
         query: query,
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Získá statistiky pro aktuálního uživatele
+     *
+     * @tags users
+     * @name GetCurrentUserStatsUsersMeStatsGet
+     * @summary Get Current User Stats
+     * @request GET:/users/me/stats
+     * @secure
+     */
+    getCurrentUserStatsUsersMeStatsGet: (params: RequestParams = {}) =>
+      this.request<UserStats, any>({
+        path: `/users/me/stats`,
+        method: "GET",
         secure: true,
         format: "json",
         ...params,

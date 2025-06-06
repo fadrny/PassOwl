@@ -2,3 +2,34 @@
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
 
+.icon-sm-black {
+    margin-left: 8px;
+    color: black;
+    width: 13px;
+    height: 13px;
+    display: inline-block;
+}
+
+.icon-sm-lblue {
+    margin-left: 4px;
+    color: var(--color-blue-600);
+    width: 14px;
+    height: 14px;
+    display: inline-block;
+}
+
+.icon-logout{
+    margin-right: 8px;
+    color: var(--color-red-700);
+    width: 14px;
+    height: 14px;
+    display: inline-block;
+}
+
+.icon-profile { 
+    margin-right: 8px;
+    color: var(--color-gray-700);
+    width: 14px;
+    height: 14px;
+    display: inline-block;
+}

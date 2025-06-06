@@ -11,7 +11,7 @@ class EncryptionKeyManager {
     private keyDerivedAt: number | null = null;
     private privateKey: string | null = null; // Nový privátní klíč
     private privateKeyDerivedAt: number | null = null; // Časové razítko privátního klíče
-    private readonly KEY_LIFETIME_MS = 10 * 60 * 1000; // 10 minut
+    private readonly KEY_LIFETIME_MS = 15 * 60 * 1000; // 15 minut
 
     /**
      * Odvození a uložení šifrovacího klíče do paměti
