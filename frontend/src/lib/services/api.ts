@@ -256,6 +256,10 @@ export interface SharedCredentialResponse {
   created_at: string;
   /** Credential Title */
   credential_title: string;
+  /** Credential Url */
+  credential_url?: string | null;
+  /** Credential Username */
+  credential_username: string;
   /** Owner Username */
   owner_username: string;
 }

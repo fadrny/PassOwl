@@ -8,6 +8,7 @@ DROP TABLE IF EXISTS secure_notes CASCADE;
 DROP TABLE IF EXISTS password_categories CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS roles CASCADE;
+DROP TABLE IF EXISTS audit_logs CASCADE;
 
 -- Create roles table
 CREATE TABLE roles (

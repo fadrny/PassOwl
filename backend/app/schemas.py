@@ -188,8 +188,10 @@ class SharedCredentialResponse(BaseModel):
     sharing_iv: str
     created_at: datetime
 
-    # Informace o původním heslu (title pro zobrazení)
+    # Informace o původním heslu (nešifrované údaje z původního hesla)
     credential_title: str
+    credential_url: Optional[str] = None
+    credential_username: str
     owner_username: str
 
     class Config:

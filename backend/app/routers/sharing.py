@@ -54,6 +54,8 @@ def share_credential(
         sharing_iv=db_shared.sharing_iv,
         created_at=db_shared.created_at,
         credential_title=credential.title if credential else "",
+        credential_url=credential.url if credential else None,
+        credential_username=credential.username if credential else "",
         owner_username=owner.username if owner else ""
     )
 
@@ -84,6 +86,8 @@ def get_received_shared_credentials(
             sharing_iv=shared.sharing_iv,
             created_at=shared.created_at,
             credential_title=credential.title if credential else "",
+            credential_url=credential.url if credential else None,
+            credential_username=credential.username if credential else "",
             owner_username=owner.username if owner else ""
         ))
 
@@ -112,6 +116,8 @@ def get_owned_shared_credentials(
             sharing_iv=shared.sharing_iv,
             created_at=shared.created_at,
             credential_title=credential.title if credential else "",
+            credential_url=credential.url if credential else None,
+            credential_username=credential.username if credential else "",
             owner_username=recipient.username if recipient else ""
         ))
 
@@ -224,6 +230,8 @@ def update_credential_sharing(
         sharing_iv=updated_shared.sharing_iv,
         created_at=updated_shared.created_at,
         credential_title=credential.title if credential else "",
+        credential_url=credential.url if credential else None,
+        credential_username=credential.username if credential else "",
         owner_username=recipient.username if recipient else ""
     )
 
