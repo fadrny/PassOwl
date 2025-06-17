@@ -19,7 +19,7 @@ CREATE TABLE roles (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create users table (rozšířeno o asymetrické klíče)
+-- Create users table 
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     username VARCHAR NOT NULL UNIQUE,
@@ -71,7 +71,7 @@ CREATE TABLE credential_category_links (
     PRIMARY KEY (credential_id, category_id)
 );
 
--- Create shared_credentials table (nová tabulka pro sdílení)
+-- Create shared_credentials table
 CREATE TABLE shared_credentials (
     id SERIAL PRIMARY KEY,
     credential_id INTEGER NOT NULL REFERENCES credentials(id) ON DELETE CASCADE,
@@ -123,8 +123,6 @@ INSERT INTO roles (name, description) VALUES
     ('user', 'Standard user role'),
     ('admin', 'Administrator role with elevated privileges');
 
--- Commit the transaction
-COMMIT;
 
 -- Add trigger to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -141,5 +139,40 @@ CREATE TRIGGER update_password_categories_updated_at BEFORE UPDATE ON password_c
 CREATE TRIGGER update_credentials_updated_at BEFORE UPDATE ON credentials FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_secure_notes_updated_at BEFORE UPDATE ON secure_notes FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- Commit the transaction
-COMMIT;
+
+-- View for user statistics
+CREATE OR REPLACE VIEW user_statistics_view AS
+SELECT
+    u.id AS user_id,
+    u.username,
+    u.created_at,
+    (SELECT COUNT(*) FROM credentials WHERE user_id = u.id) AS credentials_count,
+    (SELECT COUNT(*) FROM secure_notes WHERE user_id = u.id) AS secure_notes_count,
+    (SELECT COUNT(*) FROM shared_credentials WHERE owner_user_id = u.id) AS shared_out_count,
+    (SELECT COUNT(*) FROM shared_credentials WHERE recipient_user_id = u.id) AS shared_in_count
+FROM
+    users u
+ORDER BY
+    u.username;
+
+
+-- Create a procedure to clean up old audit logs
+-- Should be run periodically via a pgcron job or similar scheduler (for simplicity not implemented rn)
+CREATE OR REPLACE PROCEDURE cleanup_audit_logs(older_than_days INT)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    DELETE FROM audit_logs
+    WHERE created_at < NOW() - (older_than_days || ' days')::INTERVAL;
+
+    RAISE NOTICE 'Deleted audit logs older than % days.', older_than_days;
+END;
+$$;
+
+
+-- stats_user
+CREATE ROLE stats_user LOGIN PASSWORD ''; -- Should be set to password
+GRANT CONNECT ON DATABASE neondb TO stats_user;
+GRANT USAGE ON SCHEMA public TO stats_user;
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM stats_user;
+GRANT SELECT ON user_statistics_view TO stats_user;

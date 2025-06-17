@@ -1,4 +1,3 @@
-<!-- filepath: d:\01sl\skolka\PassOwl\frontend\src\lib\components\tables\SharedPasswordTable.svelte -->
 <script lang="ts">
     import Button from '../ui/Button.svelte';
     import type { SharedCredentialResponse } from '$lib/services/api';

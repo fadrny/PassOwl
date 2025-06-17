@@ -1,6 +1,3 @@
-/**
- * Kryptografické utility funkce pro PassOwl
- */
 
 /**
  * Generuje kryptograficky bezpečný salt
@@ -135,7 +132,6 @@ export async function decryptData(encryptedData: string, ivBase64: string, keyBa
     return decoder.decode(decryptedBuffer);
 }
 
-// ===== FUNKCE PRO ASYMETRICKÉ ŠIFROVÁNÍ =====
 
 /**
  * Generuje pár RSA klíčů pro asymetrické šifrování
