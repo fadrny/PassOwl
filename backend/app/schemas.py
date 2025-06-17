@@ -149,6 +149,7 @@ class AuditLog(AuditLogBase):
 
     id: int
     user_id: Optional[int] = None
+    username: Optional[str] = None
     created_at: datetime
 
 

@@ -24,6 +24,8 @@ export interface AuditLog {
   id: number;
   /** User Id */
   user_id?: number | null;
+  /** Username */
+  username?: string | null;
   /**
    * Created At
    * @format date-time

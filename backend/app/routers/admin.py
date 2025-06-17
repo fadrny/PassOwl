@@ -10,8 +10,9 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 def get_all_users(
     skip: int = 0,
     limit: int = 100,
-    current_user: database.User = Depends(auth.require_admin),
-    db: Session = Depends(database.get_db)
+    db: Session = Depends(database.get_db),
+    current_user: database.User = Depends(auth.get_current_user),
+    _: schemas.TokenData = Depends(auth.require_admin)  # Added admin check
 ):
     users = crud.get_users(db, skip=skip, limit=limit)
     
@@ -31,8 +32,9 @@ def get_audit_logs(
     skip: int = 0,
     limit: int = 100,
     user_id: Optional[int] = None,
-    current_user: database.User = Depends(auth.require_admin),
-    db: Session = Depends(database.get_db)
+    db: Session = Depends(database.get_db),
+    current_user: database.User = Depends(auth.get_current_user),
+    _: schemas.TokenData = Depends(auth.require_admin)  # Added admin check
 ):
     logs = crud.get_audit_logs(db, skip=skip, limit=limit, user_id=user_id)
     

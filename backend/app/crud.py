@@ -321,10 +321,30 @@ def create_audit_log(db: Session, user_id: Optional[int], action: str, resource_
 
 
 def get_audit_logs(db: Session, skip: int = 0, limit: int = 100, user_id: Optional[int] = None):
-    query = db.query(database.AuditLog)
+    query = db.query(database.AuditLog).outerjoin(
+        database.User, database.AuditLog.user_id == database.User.id
+    ).add_columns(database.User.username)
+    
     if user_id:
         query = query.filter(database.AuditLog.user_id == user_id)
-    return query.order_by(database.AuditLog.created_at.desc()).offset(skip).limit(limit).all()
+    
+    results = query.order_by(database.AuditLog.created_at.desc()).offset(skip).limit(limit).all()
+    
+    audit_logs = []
+    for audit_log, username in results:
+        log_dict = {
+            "id": audit_log.id,
+            "user_id": audit_log.user_id,
+            "username": username,
+            "action": audit_log.action,
+            "resource_type": audit_log.resource_type,
+            "resource_id": audit_log.resource_id,
+            "details": audit_log.details,
+            "created_at": audit_log.created_at
+        }
+        audit_logs.append(schemas.AuditLog(**log_dict))
+    
+    return audit_logs
 
 
 # Shared Credentials CRUD

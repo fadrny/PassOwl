@@ -16,7 +16,7 @@
             <div class="flex flex-col sm:flex-row items-center justify-between text-sm text-gray-500">
                 <div class="flex items-center space-x-4">
                     <span>
-                        <strong>PassOwl</strong> - Studentský projekt pro předmět KPTW2
+                        <strong>PassOwl</strong> - Studentský projekt pro předmět KPTW2 a KDBS2
                     </span>
                 </div>
                 <div class="mt-2 sm:mt-0 flex items-center space-x-1">
