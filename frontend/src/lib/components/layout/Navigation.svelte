@@ -4,6 +4,7 @@
     import AvatarUploadModal from '../modals/AvatarUploadModal.svelte';
     import MdHighlightOff from 'svelte-icons/md/MdHighlightOff.svelte'
     import MdPhotoFilter from 'svelte-icons/md/MdPhotoFilter.svelte'
+    import MdDescription from 'svelte-icons/md/MdDescription.svelte'
 
     let showDropdown = $state(false);
     let showAvatarModal = $state(false);
@@ -30,6 +31,13 @@
         event.preventDefault();
         event.stopPropagation();
         showAvatarModal = true;
+        closeDropdown();
+    }
+
+    function handleGoToLogs(event: Event){
+        event.preventDefault();
+        event.stopPropagation();
+        goto("dashboard/admin/logs")
         closeDropdown();
     }
 
@@ -98,6 +106,13 @@
                             >
                                 <div class="icon-profile"><MdPhotoFilter/></div>
                                 Změnit obrázek
+                            </button>
+                            <button
+                                onclick={handleGoToLogs}
+                                class="flex items-center w-full px-4 py-2 text-sm text-red-700 hover:bg-red-50 transition-colors duration-150"
+                            >
+                                <div class="icon-profile"><MdDescription/></div>
+                                Logy
                             </button>
                             <button
                                 onclick={handleLogout}

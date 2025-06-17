@@ -171,8 +171,8 @@ $$;
 
 
 -- stats_user
-CREATE ROLE stats_user LOGIN PASSWORD 'roottoor';
-GRANT CONNECT ON DATABASE your_database_name TO stats_user;
+CREATE ROLE stats_user LOGIN PASSWORD ''; -- Should be set to password
+GRANT CONNECT ON DATABASE neondb TO stats_user;
 GRANT USAGE ON SCHEMA public TO stats_user;
-GRANT SELECT ON user_statistics_view TO stats_user;
 REVOKE ALL ON ALL TABLES IN SCHEMA public FROM stats_user;
+GRANT SELECT ON user_statistics_view TO stats_user;
