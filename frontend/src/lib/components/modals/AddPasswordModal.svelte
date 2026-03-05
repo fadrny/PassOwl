@@ -1,212 +1,199 @@
 <script lang="ts">
-    import { PasswordManager } from '$lib/services/password-manager';
-    import type { PasswordCreateData } from '$lib/services/password-manager';
-    import { reauthManager } from '$lib/services/reauth-manager';
-    import Modal from '$lib/components/modals/Modal.svelte';
-    import Button from '$lib/components/ui/Button.svelte';
-    import Input from '$lib/components/ui/Input.svelte';
-    import ErrorMessage from '$lib/components/ui/ErrorMessage.svelte';
-    import CategorySelect from '$lib/components/ui/CategorySelect.svelte';
+	import { PasswordManager } from '$lib/services/password-manager';
+	import type { PasswordCreateData } from '$lib/services/password-manager';
+	import type { PasswordCategory } from '$lib/services/api';
+	import { reauthManager } from '$lib/services/reauth-manager';
+	import Modal from '$lib/components/modals/Modal.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import Input from '$lib/components/ui/Input.svelte';
+	import ErrorMessage from '$lib/components/ui/ErrorMessage.svelte';
+	import CategorySelect from '$lib/components/ui/CategorySelect.svelte';
 
-    interface Props {
-        open: boolean;
-        onClose: () => void;
-        onPasswordAdded?: () => void;
-    }
+	interface Props {
+		open: boolean;
+		onClose: () => void;
+		categories?: PasswordCategory[];
+		onPasswordAdded?: () => void;
+	}
 
-    let { open, onClose, onPasswordAdded }: Props = $props();
+	interface PasswordCreateFormData extends Omit<PasswordCreateData, 'url' | 'categoryIds'> {
+		url: string;
+		categoryIds: number[];
+	}
 
-    let loading = $state(false);
-    let errors: string[] = $state([]);
+	let { open, onClose, onPasswordAdded }: Props = $props();
 
-    let formData: PasswordCreateData = $state({
-        title: '',
-        username: '',
-        password: '',
-        url: '',
-        categoryIds: []
-    });
+	let loading = $state(false);
+	let errors: string[] = $state([]);
 
-    function resetForm() {
-        formData = {
-            title: '',
-            username: '',
-            password: '',
-            url: '',
-            categoryIds: []
-        };
-        errors = [];
-    }
+	let formData: PasswordCreateFormData = $state({
+		title: '',
+		username: '',
+		password: '',
+		url: '',
+		categoryIds: []
+	});
 
-    function handleClose() {
-        resetForm();
-        onClose();
-    }
+	function resetForm() {
+		formData = {
+			title: '',
+			username: '',
+			password: '',
+			url: '',
+			categoryIds: []
+		};
+		errors = [];
+	}
 
-    function validateForm(): boolean {
-        errors = [];
+	function handleClose() {
+		resetForm();
+		onClose();
+	}
 
-        if (!formData.title.trim()) {
-            errors.push('Název je povinný');
-        }
+	function validateForm(): boolean {
+		errors = [];
 
-        if (!formData.username.trim()) {
-            errors.push('Uživatelské jméno je povinné');
-        }
+		if (!formData.title.trim()) {
+			errors.push('Název je povinný');
+		}
 
-        if (!formData.password.trim()) {
-            errors.push('Heslo je povinné');
-        }
+		if (!formData.username.trim()) {
+			errors.push('Uživatelské jméno je povinné');
+		}
 
-        return errors.length === 0;
-    }
+		if (!formData.password.trim()) {
+			errors.push('Heslo je povinné');
+		}
 
-    function generatePassword() {
-        const length = 16;
-        const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=';
-        let password = '';
-        
-        for (let i = 0; i < length; i++) {
-            password += charset.charAt(Math.floor(Math.random() * charset.length));
-        }
-        
-        formData.password = password;
-    }
+		return errors.length === 0;
+	}
 
-    function handleCategoryChange(selectedIds: number[]) {
-        formData.categoryIds = selectedIds;
-    }
+	function generatePassword() {
+		const length = 16;
+		const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=';
+		let password = '';
 
-    async function handleSubmit() {
-        if (!validateForm()) return;
+		for (let i = 0; i < length; i++) {
+			password += charset.charAt(Math.floor(Math.random() * charset.length));
+		}
 
-        // Kontrola dostupnosti šifrovacího klíče s možností re-auth
-        if (!PasswordManager.isEncryptionKeyAvailable()) {
-            const reauthTriggered = reauthManager.requestReauth();
-            if (reauthTriggered) {
-                // Re-autentizace byla spuštěna, počkáme
-                return;
-            }
-            
-            errors = ['Šifrovací klíč není dostupný. Obnovte stránku a přihlaste se znovu.'];
-            return;
-        }
+		formData.password = password;
+	}
 
-        loading = true;
-        errors = [];
+	function handleCategoryChange(selectedIds: number[]) {
+		formData.categoryIds = selectedIds;
+	}
 
-        try {
-            const result = await PasswordManager.createPassword(formData);
+	async function handleSubmit() {
+		if (!validateForm()) return;
 
-            if (result.error) {
-                errors = [result.error.detail];
-                return;
-            }
+		// Kontrola dostupnosti šifrovacího klíče s možností re-auth
+		if (!PasswordManager.isEncryptionKeyAvailable()) {
+			const reauthTriggered = reauthManager.requestReauth();
+			if (reauthTriggered) {
+				// Re-autentizace byla spuštěna, počkáme
+				return;
+			}
 
-            onPasswordAdded?.();
-            handleClose();
-        } catch (err) {
-            console.error('Error creating password:', err);
-            errors = ['Nastala neočekávaná chyba při vytváření hesla'];
-        } finally {
-            loading = false;
-        }
-    }
+			errors = ['Šifrovací klíč není dostupný. Obnovte stránku a přihlaste se znovu.'];
+			return;
+		}
+
+		loading = true;
+		errors = [];
+
+		try {
+			const result = await PasswordManager.createPassword(formData);
+
+			if (result.error) {
+				errors = [result.error.detail];
+				return;
+			}
+
+			onPasswordAdded?.();
+			handleClose();
+		} catch (err) {
+			console.error('Error creating password:', err);
+			errors = ['Nastala neočekávaná chyba při vytváření hesla'];
+		} finally {
+			loading = false;
+		}
+	}
 </script>
 
 <Modal {open} onClose={handleClose} title="Přidat nové heslo">
-    {#snippet children()}
-        <form
-            class="space-y-4"
-            onsubmit={(e) => {
-                e.preventDefault();
-                handleSubmit();
-            }}
-        >
-            <Input
-                type="text"
-                name="title"
-                id="title"
-                label="Název *"
-                placeholder="např. Gmail, GitHub..."
-                required
-                bind:value={formData.title}
-            />
+	<form
+		class="space-y-4"
+		onsubmit={(e) => {
+			e.preventDefault();
+			handleSubmit();
+		}}
+	>
+		<Input
+			type="text"
+			name="title"
+			id="title"
+			label="Název *"
+			placeholder="např. Gmail, GitHub..."
+			required
+			bind:value={formData.title}
+		/>
 
-            <Input
-                type="text"
-                name="username"
-                id="username"
-                label="Uživatelské jméno *"
-                placeholder="email nebo login"
-                required
-                bind:value={formData.username}
-            />
+		<Input
+			type="text"
+			name="username"
+			id="username"
+			label="Uživatelské jméno *"
+			placeholder="email nebo login"
+			required
+			bind:value={formData.username}
+		/>
 
-            <div class="space-y-2">
-                <div class="flex items-center justify-between">
-                    <label for="password" class="block text-sm font-medium text-gray-700">
-                        Heslo *
-                    </label>
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onclick={generatePassword}
-                    >
-                        Generovat
-                    </Button>
-                </div>
-                <Input
-                    type="password"
-                    name="password"
-                    id="password"
-                    placeholder="Zadejte heslo"
-                    required
-                    bind:value={formData.password}
-                />
-            </div>
+		<div class="space-y-2">
+			<div class="flex items-center justify-between">
+				<label for="password" class="block text-sm font-medium text-gray-700"> Heslo * </label>
+				<Button type="button" variant="ghost" size="sm" onclick={generatePassword}>
+					Generovat
+				</Button>
+			</div>
+			<Input
+				type="password"
+				name="password"
+				id="password"
+				placeholder="Zadejte heslo"
+				required
+				bind:value={formData.password}
+			/>
+		</div>
 
-            <Input
-                type="url"
-                name="url"
-                id="url"
-                label="URL"
-                placeholder="https://..."
-                bind:value={formData.url}
-            />
+		<Input
+			type="url"
+			name="url"
+			id="url"
+			label="URL"
+			placeholder="https://..."
+			bind:value={formData.url}
+		/>
 
-            <CategorySelect
-                selectedIds={formData.categoryIds}
-                onSelectionChange={handleCategoryChange}
-                disabled={loading}
-            />
+		<CategorySelect
+			selectedIds={formData.categoryIds}
+			onSelectionChange={handleCategoryChange}
+			disabled={loading}
+		/>
 
-            {#if errors.length > 0}
-                <ErrorMessage message={errors[0]} />
-            {/if}
-        </form>
-    {/snippet}
+		{#if errors.length > 0}
+			<ErrorMessage message={errors[0]} />
+		{/if}
+	</form>
 
-    {#snippet footer()}
-        <div class="flex justify-end space-x-3">
-            <Button
-                type="button"
-                variant="secondary"
-                onclick={handleClose}
-                disabled={loading}
-            >
-                Zrušit
-            </Button>
-            <Button
-                type="button"
-                variant="primary"
-                disabled={loading}
-                loading={loading}
-                onclick={handleSubmit}
-            >
-                {loading ? 'Přidávání...' : 'Přidat heslo'}
-            </Button>
-        </div>
-    {/snippet}
+	{#snippet footer()}
+		<div class="flex justify-end space-x-3">
+			<Button type="button" variant="secondary" onclick={handleClose} disabled={loading}>
+				Zrušit
+			</Button>
+			<Button type="button" variant="primary" disabled={loading} {loading} onclick={handleSubmit}>
+				{loading ? 'Přidávání...' : 'Přidat heslo'}
+			</Button>
+		</div>
+	{/snippet}
 </Modal>

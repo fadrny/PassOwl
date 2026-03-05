@@ -8,10 +8,10 @@
 	import ErrorMessage from '$lib/components/ui/ErrorMessage.svelte';
 	import type { RegisterCredentials } from '$lib/types/auth';
 
-	let credentials: RegisterCredentials = $state({ 
-		username: '', 
-		password: '', 
-		passwordConfirm: '' 
+	let credentials: RegisterCredentials = $state({
+		username: '',
+		password: '',
+		passwordConfirm: ''
 	});
 	let errors: string[] = $state([]);
 	let loading = $state(false);
@@ -30,7 +30,7 @@
 
 		try {
 			const result = await AuthService.register(credentials);
-			
+
 			if (result.error) {
 				errors = [result.error.detail];
 				return;
@@ -46,7 +46,13 @@
 	}
 </script>
 
-<form class="space-y-6" onsubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
+<form
+	class="space-y-6"
+	onsubmit={(e) => {
+		e.preventDefault();
+		handleSubmit();
+	}}
+>
 	<Input
 		type="text"
 		name="username"
@@ -81,13 +87,7 @@
 		<ErrorMessage message={errors[0]} />
 	{/if}
 
-	<Button 
-		type="submit" 
-		variant="primary" 
-		size="lg" 
-		disabled={loading}
-		loading={loading}
-	>
+	<Button type="submit" variant="primary" size="lg" disabled={loading} {loading}>
 		{loading ? 'Registrování...' : 'Registrovat se'}
 	</Button>
 </form>

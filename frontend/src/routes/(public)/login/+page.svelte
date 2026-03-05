@@ -29,7 +29,7 @@
 
 <p class="mt-6 text-center text-sm text-gray-500">
 	Nemáte vytvořený účet?
-	<a href="/register" class="font-semibold text-indigo-600 hover:text-indigo-500 w-full">
+	<a href="/register" class="w-full font-semibold text-indigo-600 hover:text-indigo-500">
 		Zaregistrujte se
 	</a>
 </p>

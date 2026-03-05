@@ -1,167 +1,166 @@
 <script lang="ts">
-    import { CategoryManager } from '$lib/services/category-manager';
-    import { CATEGORY_COLORS } from '$lib/config/category-colors';
-    import type { CategoryUpdateData } from '$lib/services/category-manager';
-    import Modal from '$lib/components/modals/Modal.svelte';
-    import Button from '$lib/components/ui/Button.svelte';
-    import Input from '$lib/components/ui/Input.svelte';
-    import ErrorMessage from '$lib/components/ui/ErrorMessage.svelte';
+	import { CategoryManager } from '$lib/services/category-manager';
+	import { CATEGORY_COLORS } from '$lib/config/category-colors';
+	import Modal from '$lib/components/modals/Modal.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import Input from '$lib/components/ui/Input.svelte';
+	import ErrorMessage from '$lib/components/ui/ErrorMessage.svelte';
 
-    interface Props {
-        open: boolean;
-        onClose: () => void;
-        categoryId?: number;
-        initialData?: { name: string; color_hex: string };
-        onCategoryUpdated?: () => void;
-        onCategoryDeleted?: () => void;
-    }
+	interface Props {
+		open: boolean;
+		onClose: () => void;
+		categoryId?: number;
+		initialData?: { name: string; color_hex: string };
+		onCategoryUpdated?: () => void;
+		onCategoryDeleted?: () => void;
+	}
 
-    let { open, onClose, categoryId, initialData, onCategoryUpdated, onCategoryDeleted }: Props = $props();
+	interface CategoryFormData {
+		name: string;
+		color_hex: string;
+	}
 
-    let loading = $state(false);
-    let deleting = $state(false);
-    let errors: string[] = $state([]);
+	let { open, onClose, categoryId, initialData, onCategoryUpdated, onCategoryDeleted }: Props =
+		$props();
 
-    let formData: CategoryUpdateData = $state({
-        name: initialData?.name || '',
-        color_hex: initialData?.color_hex || '#3B82F6'
-    });
+	let loading = $state(false);
+	let deleting = $state(false);
+	let errors: string[] = $state([]);
 
-    // Reset form when modal opens with new data
-    $effect(() => {
-        if (open && initialData) {
-            formData = { ...initialData };
-        }
-    });
+	let formData: CategoryFormData = $state({
+		name: initialData?.name || '',
+		color_hex: initialData?.color_hex || '#3B82F6'
+	});
 
-    function handleClose() {
-        errors = [];
-        onClose();
-    }
+	// Reset form when modal opens with new data
+	$effect(() => {
+		if (open && initialData) {
+			formData = {
+				name: initialData.name,
+				color_hex: initialData.color_hex
+			};
+		}
+	});
 
-    function validateForm(): boolean {
-        errors = [];
+	function handleClose() {
+		errors = [];
+		onClose();
+	}
 
-        if (!formData.name?.trim()) {
-            errors.push('Název kategorie je povinný');
-        }
+	function validateForm(): boolean {
+		errors = [];
 
-        if (formData.name && formData.name.trim().length < 2) {
-            errors.push('Název kategorie musí mít alespoň 2 znaky');
-        }
+		if (!formData.name?.trim()) {
+			errors.push('Název kategorie je povinný');
+		}
 
-        return errors.length === 0;
-    }
+		if (formData.name && formData.name.trim().length < 2) {
+			errors.push('Název kategorie musí mít alespoň 2 znaky');
+		}
 
-    async function handleSubmit() {
-        if (!categoryId || !validateForm()) return;
+		return errors.length === 0;
+	}
 
-        loading = true;
-        errors = [];
+	async function handleSubmit() {
+		if (!categoryId || !validateForm()) return;
 
-        try {
-            const result = await CategoryManager.updateCategory(categoryId, formData);
+		loading = true;
+		errors = [];
 
-            if (result.error) {
-                errors = [result.error.detail];
-                return;
-            }
+		try {
+			const result = await CategoryManager.updateCategory(categoryId, formData);
 
-            onCategoryUpdated?.();
-            handleClose();
-        } catch (err) {
-            console.error('Error updating category:', err);
-            errors = ['Nastala neočekávaná chyba při aktualizaci kategorie'];
-        } finally {
-            loading = false;
-        }
-    }
+			if (result.error) {
+				errors = [result.error.detail];
+				return;
+			}
 
-    async function handleDelete() {
-        if (!categoryId) return;
+			onCategoryUpdated?.();
+			handleClose();
+		} catch (err) {
+			console.error('Error updating category:', err);
+			errors = ['Nastala neočekávaná chyba při aktualizaci kategorie'];
+		} finally {
+			loading = false;
+		}
+	}
 
-        const confirmed = confirm('Opravdu chcete smazat tuto kategorii? Tato akce je nevratná.');
-        if (!confirmed) return;
+	async function handleDelete() {
+		if (!categoryId) return;
 
-        deleting = true;
-        errors = [];
+		const confirmed = confirm('Opravdu chcete smazat tuto kategorii? Tato akce je nevratná.');
+		if (!confirmed) return;
 
-        try {
-            const result = await CategoryManager.deleteCategory(categoryId);
+		deleting = true;
+		errors = [];
 
-            if (result.error) {
-                errors = [result.error.detail];
-                return;
-            }
+		try {
+			const result = await CategoryManager.deleteCategory(categoryId);
 
-            onCategoryDeleted?.();
-            handleClose();
-        } catch (err) {
-            console.error('Error deleting category:', err);
-            errors = ['Nastala neočekávaná chyba při mazání kategorie'];
-        } finally {
-            deleting = false;
-        }
-    }
+			if (result.error) {
+				errors = [result.error.detail];
+				return;
+			}
+
+			onCategoryDeleted?.();
+			handleClose();
+		} catch (err) {
+			console.error('Error deleting category:', err);
+			errors = ['Nastala neočekávaná chyba při mazání kategorie'];
+		} finally {
+			deleting = false;
+		}
+	}
 </script>
 
 <Modal {open} onClose={handleClose} title="Upravit kategorii">
-    {#snippet children()}
-        <form class="space-y-4">
-            <Input
-                type="text"
-                label="Název kategorie *"
-                bind:value={formData.name}
-                required
-            />
+	<form class="space-y-4">
+		<Input type="text" label="Název kategorie *" bind:value={formData.name} required />
 
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2" for="color-select">
-                    Barva kategorie
-                </label>
-                <div class="grid grid-cols-4 gap-3" id="color-select">
-                    {#each CATEGORY_COLORS as color}
-                        <button
-                            type="button"
-                            class="flex items-center space-x-2 p-2 rounded-md border transition-colors {formData.color_hex === color.value 
-                                ? 'border-indigo-500 bg-indigo-50' 
-                                : 'border-gray-300 hover:bg-gray-50'}"
-                            onclick={() => formData.color_hex = color.value}
-                        >
-                            <div
-                                class="w-4 h-4 rounded-full"
-                                style="background-color: {color.value}"
-                            ></div>
-                            <span class="text-xs text-gray-700">{color.name}</span>
-                        </button>
-                    {/each}
-                </div>
-            </div>
+		<div>
+			<label class="mb-2 block text-sm font-medium text-gray-700" for="color-select">
+				Barva kategorie
+			</label>
+			<div class="grid grid-cols-4 gap-3" id="color-select">
+				{#each CATEGORY_COLORS as color (color.value)}
+					<button
+						type="button"
+						class="flex items-center space-x-2 rounded-md border p-2 transition-colors {formData.color_hex ===
+						color.value
+							? 'border-indigo-500 bg-indigo-50'
+							: 'border-gray-300 hover:bg-gray-50'}"
+						onclick={() => (formData.color_hex = color.value)}
+					>
+						<div class="h-4 w-4 rounded-full" style="background-color: {color.value}"></div>
+						<span class="text-xs text-gray-700">{color.name}</span>
+					</button>
+				{/each}
+			</div>
+		</div>
 
-            {#if errors.length > 0}
-                <ErrorMessage message={errors[0]} />
-            {/if}
-        </form>
-    {/snippet}
+		{#if errors.length > 0}
+			<ErrorMessage message={errors[0]} />
+		{/if}
+	</form>
 
-    {#snippet footer()}
-        <div class="flex justify-between">
-            <Button 
-                variant="danger" 
-                onclick={handleDelete} 
-                disabled={loading || deleting}
-                loading={deleting}
-            >
-                {deleting ? 'Mazání...' : 'Smazat kategorii'}
-            </Button>
-            <div class="flex space-x-3">
-                <Button variant="secondary" onclick={handleClose} disabled={loading || deleting}>
-                    Zrušit
-                </Button>
-                <Button variant="primary" onclick={handleSubmit} disabled={loading || deleting} loading={loading}>
-                    {loading ? 'Ukládání...' : 'Uložit změny'}
-                </Button>
-            </div>
-        </div>
-    {/snippet}
+	{#snippet footer()}
+		<div class="flex justify-between">
+			<Button
+				variant="danger"
+				onclick={handleDelete}
+				disabled={loading || deleting}
+				loading={deleting}
+			>
+				{deleting ? 'Mazání...' : 'Smazat kategorii'}
+			</Button>
+			<div class="flex space-x-3">
+				<Button variant="secondary" onclick={handleClose} disabled={loading || deleting}>
+					Zrušit
+				</Button>
+				<Button variant="primary" onclick={handleSubmit} disabled={loading || deleting} {loading}>
+					{loading ? 'Ukládání...' : 'Uložit změny'}
+				</Button>
+			</div>
+		</div>
+	{/snippet}
 </Modal>
